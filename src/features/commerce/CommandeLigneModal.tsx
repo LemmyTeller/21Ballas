@@ -18,17 +18,19 @@ function contenu(commande: Commande): string {
 }
 
 // Depuis une ligne de tarif : met l'item, avec une quantité, dans une commande.
-// Si une commande est déjà en attente avec ce partenaire, on propose de la compléter : une même commande
+// `partenaires` : le partenaire de la grille, ou toutes les petites mains quand la ligne vient de leur grille
+// commune (il faut alors dire avec laquelle on traite).
+// Si une commande est déjà en attente avec le partenaire, on propose de la compléter : une même commande
 // peut mêler des ventes et des achats.
 export function CommandeLigneModal({
-  partenaire,
+  partenaires,
   tarif,
   reference,
   commandes,
   creeParUid,
   onClose,
 }: {
-  partenaire: Partenaire
+  partenaires: Partenaire[]
   tarif: Tarif
   reference: Reference | undefined
   commandes: Commande[]
@@ -36,13 +38,19 @@ export function CommandeLigneModal({
   onClose: () => void
 }) {
   const vente = tarif.sens === 'vente'
+  const [partenaireId, setPartenaireId] = useState(partenaires.length === 1 ? partenaires[0].id : '')
+  const partenaire = partenaires.find((p) => p.id === partenaireId)
   const enCours = commandes
-    .filter((c) => c.statut === 'en_attente' && c.partenaireId === partenaire.id)
+    .filter((c) => c.statut === 'en_attente' && c.partenaireId === partenaireId)
     .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
 
   const [quantite, setQuantite] = useState('1')
-  // Par défaut on complète la commande en cours la plus récente
-  const [cible, setCible] = useState(enCours[0]?.id ?? NOUVELLE)
+  // Sans choix explicite (ou si le partenaire change), on complète la commande en cours la plus récente
+  const [cibleChoisie, setCibleChoisie] = useState<string | null>(null)
+  const cible =
+    cibleChoisie !== null && (cibleChoisie === NOUVELLE || enCours.some((c) => c.id === cibleChoisie))
+      ? cibleChoisie
+      : (enCours[0]?.id ?? NOUVELLE)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -56,6 +64,7 @@ export function CommandeLigneModal({
 
   async function enregistrer(e: FormEvent) {
     e.preventDefault()
+    if (!partenaire) return
     setEnvoi(true)
     setErreur(null)
     try {
@@ -72,9 +81,10 @@ export function CommandeLigneModal({
   const choix = 'flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm'
   const actif = 'border-purple-500 bg-purple-950/40'
   const inactif = 'border-zinc-800 hover:bg-zinc-800/50'
+  const destinataire = partenaires.length === 1 ? partenaires[0].nom : 'une petite main'
 
   return (
-    <Modal title={vente ? `Vendre à ${partenaire.nom}` : `Acheter à ${partenaire.nom}`} onClose={onClose}>
+    <Modal title={vente ? `Vendre à ${destinataire}` : `Acheter à ${destinataire}`} onClose={onClose}>
       <form onSubmit={enregistrer} className="space-y-3">
         <div className="flex items-center gap-3">
           <ImageItem item={reference} dossier={reference?.dossier} />
@@ -85,6 +95,34 @@ export function CommandeLigneModal({
             </p>
           </div>
         </div>
+
+        {partenaires.length === 0 && (
+          <p className="rounded-md border border-amber-800 bg-amber-950 px-3 py-2 text-sm text-amber-100">
+            Aucune petite main n’est enregistrée. Crée-la d’abord avec « + Partenaire » ou depuis l’Annuaire.
+          </p>
+        )}
+        {partenaires.length > 1 && (
+          <label className="block space-y-1 text-sm">
+            <span className="text-zinc-400">Petite main</span>
+            <select
+              className={inputClass}
+              value={partenaireId}
+              required
+              onChange={(e) => {
+                setPartenaireId(e.target.value)
+                setCibleChoisie(null)
+              }}
+            >
+              <option value="">Choisir…</option>
+              {partenaires.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nom}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">Quantité</span>
           <input
@@ -99,7 +137,7 @@ export function CommandeLigneModal({
           />
         </label>
 
-        {enCours.length > 0 && (
+        {partenaire && enCours.length > 0 && (
           <fieldset className="space-y-2">
             <legend className="mb-1 text-sm font-medium text-amber-200">
               Une commande est en cours avec {partenaire.nom}
@@ -111,7 +149,7 @@ export function CommandeLigneModal({
                   name="cible"
                   className="mt-0.5 accent-purple-500"
                   checked={cible === c.id}
-                  onChange={() => setCible(c.id)}
+                  onChange={() => setCibleChoisie(c.id)}
                 />
                 <span>
                   <span className="block font-medium text-zinc-100">
@@ -130,7 +168,7 @@ export function CommandeLigneModal({
                 name="cible"
                 className="mt-0.5 accent-purple-500"
                 checked={cible === NOUVELLE}
-                onChange={() => setCible(NOUVELLE)}
+                onChange={() => setCibleChoisie(NOUVELLE)}
               />
               <span className="font-medium text-zinc-100">Créer une nouvelle commande</span>
             </label>
@@ -142,7 +180,7 @@ export function CommandeLigneModal({
           <Button variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" disabled={envoi || !(Number(quantite) >= 1)}>
+          <Button type="submit" disabled={envoi || !partenaire || !(Number(quantite) >= 1)}>
             {cible === NOUVELLE ? (vente ? 'Créer la vente' : 'Créer l’achat') : 'Ajouter à la commande'}
           </Button>
         </div>

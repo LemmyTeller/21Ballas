@@ -2,7 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import type { Partenaire, Tarif, TypePartenaire } from '../../types'
-import { TYPES_PARTENAIRE, TYPE_LABELS, creerPartenaire, majPartenaire, supprimerPartenaire } from './api'
+import {
+  COULEURS_PROPOSEES,
+  COULEUR_DEFAUT,
+  TYPES_PARTENAIRE,
+  TYPE_LABELS,
+  creerPartenaire,
+  majPartenaire,
+  supprimerPartenaire,
+} from './api'
 
 // Création (sans `partenaire`) ou modification. `onCree` reçoit l'id du nouveau partenaire, pour le sélectionner.
 export function PartenaireModal({
@@ -20,6 +28,7 @@ export function PartenaireModal({
   const [type, setType] = useState<TypePartenaire>(partenaire?.type ?? 'groupe')
   const [telephone, setTelephone] = useState(partenaire?.telephone ?? '')
   const [note, setNote] = useState(partenaire?.note ?? '')
+  const [couleur, setCouleur] = useState(partenaire?.couleur ?? COULEUR_DEFAUT)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -37,7 +46,7 @@ export function PartenaireModal({
 
   function enregistrer(e: FormEvent) {
     e.preventDefault()
-    const saisie = { nom, type, telephone, note }
+    const saisie = { nom, type, telephone, note, couleur }
     executer(async () => {
       if (partenaire) await majPartenaire(partenaire.id, saisie)
       else onCree?.(await creerPartenaire(saisie))
@@ -54,7 +63,7 @@ export function PartenaireModal({
   }
 
   return (
-    <Modal title={partenaire ? 'Modifier le partenaire' : 'Ajouter un partenaire'} onClose={onClose}>
+    <Modal title={partenaire ? 'Modifier l’organisation' : 'Ajouter une organisation'} onClose={onClose}>
       <form onSubmit={enregistrer} className="space-y-3">
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">Nom</span>
@@ -77,6 +86,33 @@ export function PartenaireModal({
             ))}
           </select>
         </label>
+        <div className="space-y-1 text-sm">
+          <span className="text-zinc-400">Couleur de la tuile</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {COULEURS_PROPOSEES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Couleur ${c}`}
+                aria-pressed={couleur === c}
+                className={`size-7 rounded-md ring-offset-2 ring-offset-zinc-900 ${
+                  couleur === c ? 'ring-2 ring-white' : 'ring-1 ring-black/40 hover:ring-zinc-400'
+                }`}
+                style={{ backgroundColor: c }}
+                onClick={() => setCouleur(c)}
+              />
+            ))}
+            {/* N'importe quelle autre couleur */}
+            <input
+              type="color"
+              aria-label="Autre couleur"
+              title="Autre couleur"
+              className="size-8 cursor-pointer rounded-md border border-zinc-700 bg-zinc-950 p-0.5"
+              value={couleur}
+              onChange={(e) => setCouleur(e.target.value)}
+            />
+          </div>
+        </div>
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">Téléphone en jeu (facultatif)</span>
           <input className={inputClass} value={telephone} maxLength={20} onChange={(e) => setTelephone(e.target.value)} />

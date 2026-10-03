@@ -8,6 +8,19 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.13.0',
+    date: '2026-10-03',
+    changements: [
+      'Nouveau type d’organisation : Cartel (les boss), toujours en tête de liste.',
+      'Chaque organisation a une couleur, affichée en tuile dans l’Annuaire et dans Tarifs.',
+      'Annuaire : la colonne Organisation passe en premier et le tableau est trié par organisation ; un clic sur l’organisation permet de la modifier.',
+      'Annuaire : une organisation peut être créée directement depuis la fenêtre d’ajout d’un contact.',
+      'Tarifs : les contacts et téléphones d’un partenaire s’ouvrent par un bouton téléphone, au lieu d’être listés sur la page.',
+      'Tarifs : une seule grille commune à toutes les petites mains ; on choisit la PM au moment de créer la vente ou l’achat.',
+      'Tarifs : les entreprises n’y apparaissent plus pour le moment (elles restent dans l’Annuaire).',
+    ],
+  },
+  {
     version: '0.12.0',
     date: '2026-10-03',
     changements: [

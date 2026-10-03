@@ -80,8 +80,12 @@ tous deux facultatifs.
 
 | Collection | Contenu | Lecture | Écriture |
 |---|---|---|---|
-| `partenaires` | nom, type (`groupe`, `pm` ou `entreprise`), téléphone, note | membres validés | Admin, N1, N2 |
+| `partenaires` | nom, type (`cartel`, `groupe`, `pm` ou `entreprise`), couleur, téléphone, note | membres validés | Admin, N1, N2 |
 | `tarifs` | partenaire, item ou arme, sens (`achat` / `vente`), prix propre, prix sale, note | membres validés | Admin, N1, N2 |
+
+Seuls le Cartel et les groupes ont chacun leur grille. Toutes les petites mains partagent une grille commune, dont les lignes portent
+`partenaireId: 'pm-commun'` (`ID_GRILLE_PM`) ; la PM est choisie à la création de la commande, et un prix négocié se corrige à la validation.
+Les entreprises n'ont pas de grille pour le moment : elles n'apparaissent que dans l'Annuaire.
 
 L'identifiant d'une ligne est `<partenaire>_<sens>_<item>` : un item ne figure qu'une fois par partenaire et par sens.
 Supprimer un partenaire supprime sa grille.
@@ -90,7 +94,9 @@ Supprimer un partenaire supprime sa grille.
 
 Onglet **Annuaire**, visible par tous les membres validés ; Admin, N1 et N2 ajoutent, modifient et suppriment.
 Un contact (collection `contacts`) porte un nom, un téléphone, un rôle en texte libre, des informations, et peut être rattaché
-à un partenaire. Les partenaires sont ceux des Tarifs, avec un troisième type, `entreprise`.
+à un partenaire. Les partenaires sont ceux des Tarifs : `cartel` (les boss, toujours listés en premier), `groupe`, `pm`, `entreprise`.
+Chaque organisation a une couleur (`couleur`, `#rrggbb`) affichée en tuile ; elle se règle en cliquant sur l'organisation.
+Le tableau est trié par organisation (Cartel d'abord, puis ordre alphabétique), les contacts sans rattachement à la fin.
 Supprimer un partenaire conserve ses contacts, qui passent sans rattachement.
 
 ## Commerce (ventes et achats)

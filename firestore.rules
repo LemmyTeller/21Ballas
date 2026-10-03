@@ -117,11 +117,13 @@ service cloud.firestore {
     }
 
     function partenaireValide(data) {
-      return data.keys().hasOnly(['nom', 'type', 'telephone', 'note', 'createdAt'])
+      return data.keys().hasOnly(['nom', 'type', 'telephone', 'note', 'couleur', 'createdAt'])
         && data.keys().hasAll(['nom', 'type', 'telephone', 'note', 'createdAt'])
         && shortString(data.nom, 60)
         && data.nom.size() > 0
-        && data.type in ['groupe', 'pm', 'entreprise']
+        && data.type in ['cartel', 'groupe', 'pm', 'entreprise']
+        // Couleur de la tuile, facultative : #rrggbb
+        && (!('couleur' in data) || (data.couleur is string && data.couleur.matches('^#[0-9a-fA-F]{6}$')))
         && shortString(data.telephone, 20)
         && shortString(data.note, 300);
     }

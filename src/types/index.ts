@@ -60,8 +60,9 @@ export interface Article {
   updatedAt: Timestamp | null
 }
 
-// Organisation avec laquelle le groupe traite : un autre groupe, une petite main (PM) ou une entreprise
-export type TypePartenaire = 'groupe' | 'pm' | 'entreprise'
+// Organisation avec laquelle le groupe traite : le Cartel (les boss, joués par les MJ), un autre groupe,
+// une petite main (PM) ou une entreprise
+export type TypePartenaire = 'cartel' | 'groupe' | 'pm' | 'entreprise'
 
 // Fiche de l'Annuaire : un personnage, comment le joindre, et sa place dans son organisation
 export interface Contact {
@@ -83,6 +84,8 @@ export interface Partenaire {
   type: TypePartenaire
   telephone: string
   note: string
+  // Couleur de la tuile de l'organisation, au format #rrggbb ; absente sur les fiches anciennes
+  couleur?: string
   createdAt: Timestamp | null
 }
 

@@ -5,7 +5,7 @@ import { SelecteurReference } from '../../components/SelecteurReference'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import { formatPrix } from '../../lib/format'
 import type { Partenaire, Reference, SensTarif, Tarif } from '../../types'
-import { creerTarif, idTarif, majTarif, supprimerTarif } from './api'
+import { ID_GRILLE_PM, creerTarif, idTarif, majTarif, supprimerTarif } from './api'
 
 const prixSaisi = (valeur: string) => (valeur === '' ? null : Number(valeur))
 const texte = (prix: number | null | undefined) => (prix === null || prix === undefined ? '' : String(prix))
@@ -60,7 +60,8 @@ export function TarifModal({
     })
   }
 
-  const titre = sens === 'achat' ? `On achète à ${partenaire.nom}` : `On vend à ${partenaire.nom}`
+  const cible = partenaire.id === ID_GRILLE_PM ? 'aux petites mains' : `à ${partenaire.nom}`
+  const titre = sens === 'achat' ? `On achète ${cible}` : `On vend ${cible}`
 
   return (
     <Modal title={titre} onClose={onClose}>

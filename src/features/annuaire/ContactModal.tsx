@@ -2,8 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import type { Contact, Partenaire, TypePartenaire } from '../../types'
-import { TYPES_PARTENAIRE, TYPE_PLURIELS } from '../tarifs/api'
+import { COULEUR_DEFAUT, TYPES_PARTENAIRE, TYPE_LABELS, TYPE_PLURIELS, creerPartenaire } from '../tarifs/api'
 import { creerContact, majContact, supprimerContact } from './api'
+
+// Valeur de la liste « Organisation » qui déclenche la création d'une organisation
+const NOUVELLE = '__nouvelle'
 
 // Création (sans `contact`) ou modification d'une fiche de l'Annuaire
 export function ContactModal({
@@ -20,6 +23,8 @@ export function ContactModal({
   const [role, setRole] = useState(contact?.role ?? '')
   const [partenaireId, setPartenaireId] = useState(contact?.partenaireId ?? '')
   const [informations, setInformations] = useState(contact?.informations ?? '')
+  const [nouveauNom, setNouveauNom] = useState('')
+  const [nouveauType, setNouveauType] = useState<TypePartenaire>('groupe')
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -37,8 +42,15 @@ export function ContactModal({
 
   function enregistrer(e: FormEvent) {
     e.preventDefault()
-    const saisie = { nom, telephone, role, partenaireId: partenaireId || null, informations }
-    executer(() => (contact ? majContact(contact.id, saisie) : creerContact(saisie)))
+    executer(async () => {
+      // Organisation créée à la volée : elle existe ensuite partout (Annuaire, Tarifs), avec la couleur par défaut
+      const organisationId =
+        partenaireId === NOUVELLE
+          ? await creerPartenaire({ nom: nouveauNom, type: nouveauType, telephone: '', note: '', couleur: COULEUR_DEFAUT })
+          : partenaireId || null
+      const saisie = { nom, telephone, role, partenaireId: organisationId, informations }
+      await (contact ? majContact(contact.id, saisie) : creerContact(saisie))
+    })
   }
 
   const parType = (type: TypePartenaire) =>
@@ -87,8 +99,37 @@ export function ContactModal({
                 ))}
               </optgroup>
             ))}
+            <option value={NOUVELLE}>+ Nouvelle organisation…</option>
           </select>
         </label>
+        {partenaireId === NOUVELLE && (
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-zinc-800 p-3">
+            <label className="block space-y-1 text-sm">
+              <span className="text-zinc-400">Nom de l’organisation</span>
+              <input
+                className={inputClass}
+                value={nouveauNom}
+                maxLength={60}
+                required
+                onChange={(e) => setNouveauNom(e.target.value)}
+              />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span className="text-zinc-400">Type</span>
+              <select
+                className={inputClass}
+                value={nouveauType}
+                onChange={(e) => setNouveauType(e.target.value as TypePartenaire)}
+              >
+                {TYPES_PARTENAIRE.map((type) => (
+                  <option key={type} value={type}>
+                    {TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">Informations</span>
           <textarea
@@ -115,7 +156,7 @@ export function ContactModal({
           <Button variant="ghost" className="ml-auto" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" disabled={envoi || !nom.trim()}>
+          <Button type="submit" disabled={envoi || !nom.trim() || (partenaireId === NOUVELLE && !nouveauNom.trim())}>
             Enregistrer
           </Button>
         </div>

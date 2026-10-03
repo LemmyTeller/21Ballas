@@ -1,12 +1,21 @@
 import { useState } from 'react'
 import { useMembre } from '../auth/AuthContext'
 import { ImageItem } from '../components/ImageItem'
+import { Modal } from '../components/Modal'
 import { Button, Card, Chargement, ErrorMessage } from '../components/ui'
 import { CommandeLigneModal } from '../features/commerce/CommandeLigneModal'
 import { useCommandes } from '../features/commerce/useCommandes'
 import { useContacts } from '../features/annuaire/useContacts'
-import { TYPES_PARTENAIRE, TYPE_LABELS, TYPE_PLURIELS } from '../features/tarifs/api'
+import {
+  GRILLE_PM,
+  ID_GRILLE_PM,
+  TYPES_AVEC_GRILLE,
+  TYPE_LABELS,
+  TYPE_PLURIELS,
+  comparerPartenaires,
+} from '../features/tarifs/api'
 import { PartenaireModal } from '../features/tarifs/PartenaireModal'
+import { TuileCouleur } from '../features/tarifs/TuileCouleur'
 import { TarifModal } from '../features/tarifs/TarifModal'
 import { usePartenaires } from '../features/tarifs/usePartenaires'
 import { useTarifs } from '../features/tarifs/useTarifs'
@@ -21,6 +30,7 @@ type Fenetre =
   | { type: 'partenaire'; partenaire?: Partenaire }
   | { type: 'tarif'; sens: SensTarif; tarif?: Tarif }
   | { type: 'commande'; tarif: Tarif }
+  | { type: 'contacts' }
 
 const SENS: { sens: SensTarif; titre: string }[] = [
   { sens: 'achat', titre: 'On lui achète' },
@@ -65,10 +75,14 @@ export function Tarifs() {
   const estGrade = aAuMoins(moi.role, 'n2')
   const chargement = partenaires.loading || tarifs.loading || articles.loading || lieux.loading || !catalogue.items
 
-  const tries = [...partenaires.data].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-  // Sans choix explicite (ou si le partenaire choisi vient d'être supprimé), le premier groupe, sinon la première PM
+  // Seuls le Cartel et les groupes ont leur propre grille ; les petites mains partagent la grille commune
+  const tries = partenaires.data.filter((p) => TYPES_AVEC_GRILLE.includes(p.type)).sort(comparerPartenaires)
+  const pms = partenaires.data.filter((p) => p.type === 'pm').sort(comparerPartenaires)
+  // Sans choix explicite (ou si le partenaire choisi vient d'être supprimé) : le premier de la liste,
+  // à défaut la grille des petites mains
   const selection =
-    tries.find((p) => p.id === selectionId) ?? tries.find((p) => p.type === 'groupe') ?? tries[0] ?? null
+    selectionId === ID_GRILLE_PM ? GRILLE_PM : (tries.find((p) => p.id === selectionId) ?? tries[0] ?? GRILLE_PM)
+  const grillePM = selection.id === ID_GRILLE_PM
 
   const reference = (tarif: Tarif): Reference | undefined => catalogue.items?.find((r) => r.cle === tarif.reference)
   const nom = (tarif: Tarif) => reference(tarif)?.name ?? `Item ${tarif.reference}`
@@ -94,11 +108,12 @@ export function Tarifs() {
               <li key={p.id}>
                 <button
                   type="button"
-                  className={`w-full rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors ${
-                    selection?.id === p.id ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                  className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors ${
+                    selection.id === p.id ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
                   }`}
                   onClick={() => setSelectionId(p.id)}
                 >
+                  <TuileCouleur partenaire={p} className="size-3" />
                   {p.nom}
                 </button>
               </li>
@@ -115,7 +130,7 @@ export function Tarifs() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-50">Tarifs</h1>
           <p className="text-sm text-zinc-400">
-            Ce qu’on achète et ce qu’on vend à chaque groupe et petite main, en propre ou en sale (billets de 1$).
+            Ce qu’on achète et ce qu’on vend à chaque groupe et aux petites mains, en propre ou en sale (billets de 1$).
           </p>
         </div>
         {estGrade && <Button onClick={() => setFenetre({ type: 'partenaire' })}>+ Partenaire</Button>}
@@ -127,42 +142,69 @@ export function Tarifs() {
 
       {chargement ? (
         !catalogue.erreur && <Chargement />
-      ) : tries.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          Aucun partenaire pour le moment.{estGrade && ' Commence par en créer un avec « + Partenaire ».'}
-        </p>
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
           <Card className="space-y-4 p-4!">
-            {TYPES_PARTENAIRE.map((type) => liste(type, TYPE_PLURIELS[type]))}
+            {TYPES_AVEC_GRILLE.map((type) => liste(type, TYPE_PLURIELS[type]))}
+            <div>
+              <p className="mb-1 text-xs font-medium tracking-wide text-zinc-500 uppercase">{TYPE_PLURIELS.pm}</p>
+              <button
+                type="button"
+                className={`w-full rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors ${
+                  grillePM ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                }`}
+                onClick={() => setSelectionId(ID_GRILLE_PM)}
+              >
+                Tarif commun
+              </button>
+            </div>
           </Card>
 
-          {selection && (
+          {
             <div className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="flex flex-wrap items-center gap-2">
+                    {!grillePM && <TuileCouleur partenaire={selection} className="size-5" />}
                     <span className="text-xl font-semibold text-zinc-50">{selection.nom}</span>
                     <span className="rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-zinc-300">
-                      {TYPE_LABELS[selection.type]}
+                      {grillePM ? 'Tarif commun' : TYPE_LABELS[selection.type]}
                     </span>
+                    {/* Téléphone du partenaire et contacts de l'Annuaire, regroupés dans une fenêtre */}
+                    {(selection.telephone || contactsDe(selection).length > 0) && (
+                      <button
+                        type="button"
+                        aria-label={`Contacts de ${selection.nom}`}
+                        title="Contacts et téléphones"
+                        className="flex items-center gap-1.5 rounded-md border border-zinc-700 px-2 py-1 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+                        onClick={() => setFenetre({ type: 'contacts' })}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="size-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                        {contactsDe(selection).length > 0 && contactsDe(selection).length}
+                      </button>
+                    )}
                   </p>
-                  {selection.telephone && <p className="text-sm text-zinc-400">Tél. {selection.telephone}</p>}
                   {selection.note && <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-400">{selection.note}</p>}
-                  {/* Contacts de l'Annuaire rattachés à ce partenaire */}
-                  {contactsDe(selection).length > 0 && (
-                    <ul className="mt-2 space-y-0.5 text-sm">
-                      {contactsDe(selection).map((c) => (
-                        <li key={c.id} className="text-zinc-300">
-                          <span className="font-medium text-zinc-100">{c.nom}</span>
-                          {c.role && <span className="text-zinc-500"> · {c.role}</span>}
-                          {c.telephone && <span> · {c.telephone}</span>}
-                        </li>
-                      ))}
-                    </ul>
+                  {grillePM && (
+                    <p className="mt-1 max-w-2xl text-sm text-zinc-400">
+                      Les mêmes tarifs pour toutes les petites mains
+                      {pms.length > 0 && ` (${pms.map((p) => p.nom).join(', ')})`}. Un prix négocié avec l’une d’elles se
+                      corrige à la validation de la commande.
+                    </p>
                   )}
                 </div>
-                {estGrade && (
+                {estGrade && !grillePM && (
                   <Button variant="ghost" onClick={() => setFenetre({ type: 'partenaire', partenaire: selection })}>
                     Modifier
                   </Button>
@@ -178,7 +220,7 @@ export function Tarifs() {
                   return (
                     <Card
                       key={sens}
-                      title={titre}
+                      title={grillePM ? titre.replace('lui', 'leur') : titre}
                       action={estGrade && <Button onClick={() => setFenetre({ type: 'tarif', sens })}>+ Ligne</Button>}
                     >
                       {lignes.length === 0 ? (
@@ -270,7 +312,7 @@ export function Tarifs() {
                 })}
               </div>
             </div>
-          )}
+          }
         </div>
       )}
 
@@ -316,9 +358,44 @@ export function Tarifs() {
         </>
       )}
 
-      {fenetre?.type === 'commande' && selection && (
+      {fenetre?.type === 'contacts' && (
+        <Modal title={`Contacts — ${selection.nom}`} onClose={() => setFenetre(null)}>
+          {selection.telephone && (
+            <p className="text-sm text-zinc-300">
+              Téléphone de l’organisation :{' '}
+              <span className="font-semibold text-zinc-50 tabular-nums">{selection.telephone}</span>
+            </p>
+          )}
+          {contactsDe(selection).length === 0 ? (
+            <p className="text-sm text-zinc-500">Aucun contact rattaché dans l’Annuaire.</p>
+          ) : (
+            <ul className="max-h-[60svh] divide-y divide-zinc-800 overflow-y-auto">
+              {contactsDe(selection).map((c) => (
+                <li key={c.id} className="py-2 text-sm">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p>
+                      <span className="font-medium text-zinc-100">{c.nom}</span>
+                      {c.role && <span className="text-zinc-500"> · {c.role}</span>}
+                    </p>
+                    <span className="font-semibold whitespace-nowrap text-zinc-50 tabular-nums">{c.telephone || '—'}</span>
+                  </div>
+                  {c.informations && <p className="mt-0.5 text-xs whitespace-pre-wrap text-zinc-400">{c.informations}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => setFenetre(null)}>
+              Fermer
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {fenetre?.type === 'commande' && (
         <CommandeLigneModal
-          partenaire={selection}
+          // Depuis la grille commune, il faut dire avec quelle petite main on traite
+          partenaires={grillePM ? pms : [selection]}
           tarif={fenetre.tarif}
           reference={reference(fenetre.tarif)}
           commandes={commandes.data}
@@ -334,7 +411,7 @@ export function Tarifs() {
           onClose={() => setFenetre(null)}
         />
       )}
-      {fenetre?.type === 'tarif' && selection && catalogue.items && (
+      {fenetre?.type === 'tarif' && catalogue.items && (
         <TarifModal
           partenaire={selection}
           sens={fenetre.sens}

@@ -529,9 +529,20 @@ describe('annuaire', () => {
   it('un contact a toujours un nom', async () => {
     await assertFails(setDoc(doc(dbDe('n2'), 'contacts', 'k3'), contact({ nom: '' })))
   })
-  it('un partenaire peut être une entreprise', async () => {
-    const entreprise = { nom: 'Benny’s', type: 'entreprise', telephone: '', note: '', createdAt: serverTimestamp() }
-    await assertSucceeds(setDoc(doc(dbDe('n2'), 'partenaires', 'e1'), entreprise))
+  it('un partenaire peut être une entreprise ou le Cartel, avec une couleur', async () => {
+    const organisation = (type: string, couleur?: unknown) => ({
+      nom: 'Benny’s',
+      type,
+      telephone: '',
+      note: '',
+      createdAt: serverTimestamp(),
+      ...(couleur === undefined ? {} : { couleur }),
+    })
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'partenaires', 'e1'), organisation('entreprise')))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'partenaires', 'e2'), organisation('cartel', '#dc2626')))
+    await assertFails(setDoc(doc(dbDe('n2'), 'partenaires', 'e3'), organisation('groupe', 'rouge')))
+    // Une fiche créée avant les couleurs en reçoit une à la modification
+    await assertSucceeds(updateDoc(doc(dbDe('n2'), 'partenaires', 'p1'), { couleur: '#16a34a' }))
   })
 })
 
