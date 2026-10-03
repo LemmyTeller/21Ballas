@@ -18,7 +18,7 @@ import type { Annonce, Membre } from '../types'
 export function Accueil() {
   const membre = useMembre()
   const membres = useMembres()
-  const estGrade = aAuMoins(membre.role, 'n2')
+  const estGrade = aAuMoins(membre, 'n2')
   const enAttente = membres.data.filter((m) => m.role === 'pending' && m.nomRP.trim()).length
 
   return (
@@ -122,7 +122,7 @@ function Joueurs({ moi, membres }: { moi: Membre; membres: Membre[] }) {
 function Annonces({ membre, membres }: { membre: Membre; membres: Membre[] }) {
   const annonces = useAnnonces()
   const [saisie, setSaisie] = useState(false)
-  const peutPublier = aAuMoins(membre.role, 'officier')
+  const peutPublier = aAuMoins(membre, 'officier')
 
   return (
     <Card
@@ -158,7 +158,7 @@ function Annonces({ membre, membres }: { membre: Membre; membres: Membre[] }) {
 
 function AnnonceItem({ annonce, membre, auteur }: { annonce: Annonce; membre: Membre; auteur: string }) {
   const peutSupprimer =
-    aAuMoins(membre.role, 'n2') || (membre.role === 'officier' && annonce.auteurUid === membre.uid)
+    aAuMoins(membre, 'n2') || (membre.role === 'officier' && annonce.auteurUid === membre.uid)
 
   function supprimer() {
     if (window.confirm(`Supprimer l’annonce « ${annonce.titre} » ?`)) {

@@ -4,6 +4,7 @@ import { useAuth } from './auth/AuthContext'
 import { AuthProvider } from './auth/AuthProvider'
 import { RequireRole } from './auth/RequireRole'
 import { Button, CenteredScreen, Chargement, ErrorMessage, Logo } from './components/ui'
+import { MigrationAdmin } from './features/members/MigrationAdmin'
 import { AppLayout } from './layout/AppLayout'
 import { auth } from './lib/firebase'
 import { Accueil } from './pages/Accueil'
@@ -39,6 +40,8 @@ function Portail() {
   }
   if (membre.role === 'pending') return <Pending membre={membre} email={user.email} />
   if (membre.role === 'revoque') return <Revoque membre={membre} email={user.email} />
+  // Ancien grade « Admin » : le compte choisit une fois son grade RP et reçoit le droit admin à la place
+  if (membre.role === 'admin') return <MigrationAdmin membre={membre} />
 
   return (
     <BrowserRouter>

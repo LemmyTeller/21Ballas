@@ -66,7 +66,7 @@ export function Commerce() {
   const [aValider, setAValider] = useState<Commande | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
-  const estGrade = aAuMoins(moi.role, 'n2')
+  const estGrade = aAuMoins(moi, 'n2')
   const chargement =
     commandes.loading || membres.loading || lieux.loading || articles.loading || !catalogue.items
 

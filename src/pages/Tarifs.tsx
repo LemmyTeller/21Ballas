@@ -77,7 +77,7 @@ export function Tarifs() {
   const contactsDe = (partenaire: Partenaire) =>
     contacts.data.filter((c) => c.partenaireId === partenaire.id).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
 
-  const estGrade = aAuMoins(moi.role, 'n2')
+  const estGrade = aAuMoins(moi, 'n2')
   const chargement = partenaires.loading || tarifs.loading || articles.loading || lieux.loading || !catalogue.items
 
   // Seuls le Cartel et les groupes ont leur propre grille ; les petites mains partagent la grille commune

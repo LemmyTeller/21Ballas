@@ -8,6 +8,14 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.17.0',
+    date: '2026-10-03',
+    changements: [
+      'Grades : « Admin » n’est plus un grade. Chaque membre apparaît désormais avec son grade RP.',
+      'L’administration de l’intranet devient un droit à part, indépendant du grade.',
+    ],
+  },
+  {
     version: '0.16.0',
     date: '2026-10-03',
     changements: [

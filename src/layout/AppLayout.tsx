@@ -47,7 +47,7 @@ export function AppLayout() {
       <aside className="flex shrink-0 flex-col gap-4 border-b border-zinc-800 bg-zinc-900 p-4 md:sticky md:top-0 md:h-svh md:w-60 md:self-start md:overflow-y-auto md:border-r md:border-b-0">
         <Logo className="size-12 md:size-16" />
         <nav className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
-          {LIENS.filter((l) => aAuMoins(membre.role, l.minimum)).map((l) => (
+          {LIENS.filter((l) => aAuMoins(membre, l.minimum)).map((l) => (
             <NavLink
               key={l.to}
               to={l.to}

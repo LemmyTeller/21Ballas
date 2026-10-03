@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
@@ -51,6 +52,9 @@ beforeEach(async () => {
       await setDoc(doc(db, 'users', uid), fiche(role))
       await setDoc(doc(db, 'users', uid, 'prive', 'compte'), { email: emailDe(uid) })
     }
+    // Admin au grade Masque noir : le droit vit dans sa zone privée, rien ne le montre sur sa fiche
+    await setDoc(doc(db, 'users', 'cache'), fiche('membre'))
+    await setDoc(doc(db, 'users', 'cache', 'prive', 'droits'), { admin: true })
     // Fiche d'avant la séparation, avec des données personnelles
     await setDoc(doc(db, 'users', 'ancien'), {
       ...fiche('membre'),
@@ -264,9 +268,12 @@ describe('users : grades', () => {
   })
   it('un admin gère tous les grades, y compris N1 et admin', async () => {
     await assertSucceeds(changer('admin', 'attente', 'membre'))
-    await assertSucceeds(changer('admin', 'noir', 'admin'))
     await assertSucceeds(changer('admin', 'n1', 'n2'))
     await assertSucceeds(changer('admin', 'admin2', 'revoque'))
+  })
+  it('« admin » n’est plus un grade attribuable', async () => {
+    await assertFails(changer('admin', 'noir', 'admin'))
+    await assertFails(changer('cache', 'noir', 'admin'))
   })
   it('on ne signe pas pour un autre et on n’invente pas de grade', async () => {
     await assertFails(updateDoc(doc(dbDe('n1'), 'users', 'noir'), grade('officier', 'n1bis')))
@@ -276,6 +283,65 @@ describe('users : grades', () => {
   it('un membre révoqué perd l’accès immédiatement', async () => {
     await changer('n1', 'noir', 'revoque')
     await assertFails(getDocs(collection(dbDe('noir'), 'users')))
+  })
+})
+
+describe('droit admin, séparé du grade', () => {
+  const droits = (db: ReturnType<typeof dbDe>, uid: string) => doc(db, 'users', uid, 'prive', 'droits')
+  const grade = (role: string, par: string) => ({ role, validatedBy: par, validatedAt: serverTimestamp() })
+
+  it('un admin au grade Masque noir a tous les droits', async () => {
+    await assertSucceeds(updateDoc(doc(dbDe('cache'), 'users', 'n1'), grade('n2', 'cache')))
+    await assertSucceeds(getDoc(doc(dbDe('cache'), 'users', 'noir', 'prive', 'compte')))
+    await assertSucceeds(getDocs(collection(dbDe('cache'), 'logs')))
+    await assertSucceeds(deleteDoc(doc(dbDe('cache'), 'users', 'n1bis')))
+  })
+  it('le droit est invisible : seuls le joueur et les admins le lisent', async () => {
+    await assertSucceeds(getDoc(droits(dbDe('cache'), 'cache')))
+    await assertSucceeds(getDoc(droits(dbDe('admin'), 'cache')))
+    for (const uid of ['n1', 'n2', 'violet', 'noir']) {
+      await assertFails(getDoc(droits(dbDe(uid), 'cache')))
+    }
+  })
+  it('N1 et N2 ne touchent pas un admin, même affiché Masque noir', async () => {
+    await assertFails(updateDoc(doc(dbDe('n1'), 'users', 'cache'), grade('officier', 'n1')))
+    await assertFails(
+      updateDoc(doc(dbDe('n1'), 'users', 'cache'), { ...grade('revoque', 'n1'), raisonRevocation: 'cavale' }),
+    )
+    await assertFails(updateDoc(doc(dbDe('n2'), 'users', 'cache'), { compteBancaire: 10 }))
+    await assertFails(deleteDoc(doc(dbDe('n1'), 'users', 'cache')))
+    await assertFails(deleteDoc(droits(dbDe('n1'), 'cache')))
+  })
+  it('seul un admin donne ou retire le droit, et jamais à lui-même', async () => {
+    await assertSucceeds(setDoc(droits(dbDe('cache'), 'noir'), { admin: true }))
+    await assertSucceeds(deleteDoc(droits(dbDe('cache'), 'noir')))
+    await assertFails(setDoc(droits(dbDe('n1'), 'noir'), { admin: true }))
+    await assertFails(setDoc(droits(dbDe('noir'), 'noir'), { admin: true }))
+    await assertFails(setDoc(droits(dbDe('cache'), 'noir'), { admin: true, autre: 1 }))
+    await assertFails(deleteDoc(droits(dbDe('cache'), 'cache')))
+    await assertFails(setDoc(droits(dbDe('cache'), 'cache'), { admin: false }))
+  })
+  it('un admin change son propre grade, sans pouvoir se révoquer', async () => {
+    await assertSucceeds(updateDoc(doc(dbDe('cache'), 'users', 'cache'), grade('n1', 'cache')))
+    await assertFails(updateDoc(doc(dbDe('cache'), 'users', 'cache'), grade('revoque', 'cache')))
+    await assertFails(updateDoc(doc(dbDe('cache'), 'users', 'cache'), grade('admin', 'cache')))
+  })
+  it('un droit laissé sur un compte en attente ou révoqué ne donne rien', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', 'banni', 'prive', 'droits'), { admin: true })
+    })
+    await assertFails(getDocs(collection(dbDe('banni'), 'users')))
+  })
+  it('migration : l’ancien grade admin devient un droit privé et un grade RP, ensemble', async () => {
+    const db = dbDe('admin')
+    // Le grade seul, sans le droit : refusé
+    await assertFails(updateDoc(doc(db, 'users', 'admin'), grade('membre', 'admin')))
+    const batch = writeBatch(db)
+    batch.set(droits(db, 'admin'), { admin: true })
+    batch.update(doc(db, 'users', 'admin'), grade('membre', 'admin'))
+    await assertSucceeds(batch.commit())
+    // Toujours admin après la migration
+    await assertSucceeds(updateDoc(doc(db, 'users', 'n1'), grade('n2', 'admin')))
   })
 })
 

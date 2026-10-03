@@ -16,7 +16,7 @@ export function Taches({ membre }: { membre: Membre }) {
   const aVoler = useCarjackings().data.filter((c) => c.statut === 'a_voler').length
   const [saisie, setSaisie] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const estGrade = aAuMoins(membre.role, 'n2')
+  const estGrade = aAuMoins(membre, 'n2')
 
   // Les tâches réalisées descendent en bas de liste, sans perdre leur ordre entre elles
   const aFaire = taches.data.filter((t) => !t.fait)

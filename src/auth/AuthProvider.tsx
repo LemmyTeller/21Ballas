@@ -11,6 +11,8 @@ const CLES_PERSONNELLES = ['email', 'displayName', 'photoURL']
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [membre, setMembre] = useState<Membre | null>(null)
+  // null : pas encore lu
+  const [admin, setAdmin] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // Évite de retenter la création ou la migration en boucle si les règles la refusent
@@ -21,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onAuthStateChanged(auth, (u) => {
         setUser(u)
         setMembre(null)
+        setAdmin(null)
         setError(null)
         setLoading(u !== null)
       }),
@@ -89,5 +92,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
   }, [user])
 
-  return <AuthContext value={{ user, membre, loading, error }}>{children}</AuthContext>
+  // Droit d'administration : lu dans sa propre zone privée, que les autres membres ne peuvent pas lire
+  useEffect(() => {
+    if (!user) return
+    return onSnapshot(
+      doc(db, 'users', user.uid, 'prive', 'droits'),
+      (snap) => setAdmin(snap.data()?.admin === true),
+      () => setAdmin(false),
+    )
+  }, [user])
+
+  // Tant que le droit admin n'est pas connu, l'appli attend : sinon un admin au petit grade serait d'abord
+  // traité comme un simple membre, et renvoyé des pages réservées
+  const pret = !loading && (membre === null || admin !== null)
+
+  return (
+    <AuthContext value={{ user, membre: membre && { ...membre, admin: admin === true }, loading: !pret, error }}>
+      {children}
+    </AuthContext>
+  )
 }

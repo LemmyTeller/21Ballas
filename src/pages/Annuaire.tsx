@@ -32,7 +32,7 @@ export function Annuaire() {
   const [filtre, setFiltre] = useState<Filtre>('tous')
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
 
-  const estGrade = aAuMoins(moi.role, 'n2')
+  const estGrade = aAuMoins(moi, 'n2')
   // Un contact dont le partenaire a disparu compte comme sans rattachement
   const organisation = (contact: Contact) => partenaires.data.find((p) => p.id === contact.partenaireId)
 

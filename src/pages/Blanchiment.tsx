@@ -71,7 +71,7 @@ export function Blanchiment() {
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
-  const estGrade = aAuMoins(moi.role, 'n2')
+  const estGrade = aAuMoins(moi, 'n2')
   const chargement = commerces.loading || depots.loading || partenaires.loading || lieux.loading || articles.loading
 
   const parZip = (a: CommerceVille, b: CommerceVille) => a.zip.localeCompare(b.zip, 'fr', { numeric: true })

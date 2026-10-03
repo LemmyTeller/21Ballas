@@ -39,7 +39,7 @@ export function Carjacking() {
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
-  const estGrade = aAuMoins(moi.role, 'n2')
+  const estGrade = aAuMoins(moi, 'n2')
   const chargement = fiches.loading || membres.loading || !catalogue.items
   const nomMembre = (uid: string | undefined) => nomAffiche(membres.data.find((m) => m.uid === uid))
   const modele = (fiche: Fiche) => trouverModele(fiche, catalogue.items ?? [])

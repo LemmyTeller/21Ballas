@@ -7,6 +7,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   officier: 'Masque violet',
   n2: 'N2',
   n1: 'N1',
+  // Ancien grade, remplacé par le droit admin : ne subsiste que sur une fiche pas encore migrée
   admin: 'Admin',
   revoque: 'Révoqué',
 }
@@ -14,11 +15,25 @@ export const ROLE_LABELS: Record<Role, string> = {
 // Doit rester aligné sur rank() dans firestore.rules
 const RANGS: Record<Role, number> = { revoque: -1, pending: 0, membre: 1, officier: 2, n2: 3, n1: 4, admin: 5 }
 
-// Rôles attribuables à un compte validé, du plus haut au plus bas
-export const ROLES_VALIDES: Role[] = ['admin', 'n1', 'n2', 'officier', 'membre']
+// Grades RP attribuables à un compte validé, du plus haut au plus bas
+export const ROLES_VALIDES: Role[] = ['n1', 'n2', 'officier', 'membre']
 
-export function aAuMoins(role: Role | undefined, minimum: Role): boolean {
-  return role !== undefined && RANGS[role] >= RANGS[minimum]
+// Le membre connecté, pour un test de droits : son grade RP et, à part, son droit d'administration.
+// Le droit admin est invisible des autres : on ne le connaît que pour soi-même.
+type Sujet = Pick<Membre, 'role' | 'admin'>
+
+// Admin : porte le droit privé (compte validé), ou fiche encore à l'ancien grade « Admin »
+export function aLeDroitAdmin(sujet: Sujet | null | undefined): boolean {
+  if (!sujet) return false
+  return sujet.role === 'admin' || (sujet.admin === true && RANGS[sujet.role] >= RANGS.membre)
+}
+
+// Avec un simple grade : comparaison de rangs (pour les autres membres).
+// Avec le membre connecté : un admin passe partout, quel que soit son grade affiché.
+export function aAuMoins(sujet: Role | Sujet | null | undefined, minimum: Role): boolean {
+  if (!sujet) return false
+  if (typeof sujet === 'string') return RANGS[sujet] >= RANGS[minimum]
+  return aLeDroitAdmin(sujet) || RANGS[sujet.role] >= RANGS[minimum]
 }
 
 export function estValide(role: Role | undefined): boolean {
@@ -30,15 +45,16 @@ export function rang(role: Role): number {
 }
 
 // L'admin gère tout le monde ; N1 et N2 uniquement les rangs strictement inférieurs au leur.
-// Personne ne modifie son propre rôle. Doit rester aligné sur firestore.rules.
-export function peutGerer(acteur: Pick<Membre, 'uid' | 'role'>, cible: Pick<Membre, 'uid' | 'role'>): boolean {
+// Personne ne gère sa propre fiche par ce biais. Doit rester aligné sur firestore.rules.
+// Une cible qui est admin sans que cela se voie sera refusée par la base à un N1 ou un N2.
+export function peutGerer(acteur: Sujet & Pick<Membre, 'uid'>, cible: Pick<Membre, 'uid' | 'role'>): boolean {
   if (acteur.uid === cible.uid) return false
-  if (acteur.role === 'admin') return true
+  if (aLeDroitAdmin(acteur)) return true
   return aAuMoins(acteur.role, 'n2') && RANGS[cible.role] < RANGS[acteur.role]
 }
 
-export function rolesAttribuables(acteur: Role): Role[] {
-  return acteur === 'admin' ? ROLES_VALIDES : ROLES_VALIDES.filter((r) => RANGS[r] < RANGS[acteur])
+export function rolesAttribuables(acteur: Sujet): Role[] {
+  return aLeDroitAdmin(acteur) ? ROLES_VALIDES : ROLES_VALIDES.filter((r) => RANGS[r] < RANGS[acteur.role])
 }
 
 export function nomAffiche(membre: Pick<Membre, 'nomRP'> | undefined): string {

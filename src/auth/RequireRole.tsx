@@ -7,6 +7,6 @@ import { useAuth } from './AuthContext'
 // Masque seulement l'écran : la vraie protection est dans firestore.rules
 export function RequireRole({ minimum, children }: { minimum: Role; children: ReactNode }) {
   const { membre } = useAuth()
-  if (!aAuMoins(membre?.role, minimum)) return <Navigate to="/" replace />
+  if (!aAuMoins(membre, minimum)) return <Navigate to="/" replace />
   return children
 }

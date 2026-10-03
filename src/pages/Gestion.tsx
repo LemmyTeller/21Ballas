@@ -12,7 +12,7 @@ import { useVehicules } from '../features/gestion/useVehicules'
 import { VehiculeModal } from '../features/gestion/VehiculeModal'
 import { useMembres } from '../features/members/useMembres'
 import { quantiteDans, useArticles } from '../features/stock/useArticles'
-import { aAuMoins, estValide, nomAffiche, peutGerer, rang } from '../lib/roles'
+import { aAuMoins, aLeDroitAdmin, estValide, nomAffiche, peutGerer, rang } from '../lib/roles'
 import type { Lieu, Membre, Vehicule } from '../types'
 
 type Vue = 'membres' | 'garages'
@@ -33,8 +33,8 @@ export function Gestion() {
   const [vue, setVue] = useState<Vue>('membres')
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
 
-  const estAdmin = moi.role === 'admin'
-  const estGrade = aAuMoins(moi.role, 'n2')
+  const estAdmin = aLeDroitAdmin(moi)
+  const estGrade = aAuMoins(moi, 'n2')
 
   const valides = membres.data
     .filter((m) => estValide(m.role))

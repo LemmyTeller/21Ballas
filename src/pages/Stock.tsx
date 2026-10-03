@@ -52,7 +52,7 @@ export function Stock() {
   const [erreurAction, setErreurAction] = useState<string | null>(null)
   const nbColonnes = useNombreColonnes()
 
-  const estGrade = aAuMoins(moi.role, 'n2')
+  const estGrade = aAuMoins(moi, 'n2')
   // Un lieu supprimé pendant qu'on le consulte ramène sur Global
   const lieu = lieux.data.find((l) => l.id === onglet)
   const chargement = lieux.loading || categories.loading || articles.loading || !catalogue.items

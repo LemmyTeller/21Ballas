@@ -32,7 +32,7 @@ export function Contrats({ membre }: { membre: Membre }) {
   // `null` : fenêtre fermée ; `{}` : ajout ; `{ contrat }` : modification
   const [fenetre, setFenetre] = useState<{ contrat?: Contrat } | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
-  const estGrade = aAuMoins(membre.role, 'n2')
+  const estGrade = aAuMoins(membre, 'n2')
 
   // Les contrats à payer d'abord, du plus urgent au plus lointain, puis ceux déjà payés
   const tries = contrats.data

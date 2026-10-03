@@ -16,7 +16,11 @@ export interface Membre {
   // Anniversaire du personnage, au format JJ/MM
   anniversaireRP?: string
   compteBancaire?: number
+  // Grade RP affiché. L'ancienne valeur 'admin' ne subsiste que sur une fiche pas encore migrée.
   role: Role
+  // Droit d'administration, indépendant du grade. Il ne vient pas de la fiche publique mais de la zone privée
+  // users/{uid}/prive/droits : il n'est donc renseigné que pour le membre connecté lui-même.
+  admin?: boolean
   raisonRevocation?: RaisonRevocation
   createdAt: Timestamp | null
   validatedBy?: string

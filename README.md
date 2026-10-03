@@ -9,7 +9,8 @@ Intranet du groupe RP Ballas (21 JumpClick). React + Vite + TypeScript + Tailwin
 2. Copier `.env.example` en `.env.local` et y coller la config de l'application Web.
 3. Lier le dossier au projet : `firebase login` puis `firebase use --add`.
 4. `npm install` puis `npm run dev`.
-5. Se connecter une première fois, puis dans la console Firestore passer sa fiche `users/{uid}` à `role: "admin"`.
+5. Se connecter une première fois, puis dans la console Firestore passer sa fiche `users/{uid}` à `role: "membre"`
+   (ou un autre grade) et créer le document `users/{uid}/prive/droits` avec `admin: true`.
    Les admins et chefs suivants se nomment depuis la page Membres.
 
 ## Rôles
@@ -21,12 +22,23 @@ Intranet du groupe RP Ballas (21 JumpClick). React + Vite + TypeScript + Tailwin
 | `officier` | Masque violet | + publication d'annonces |
 | `n2` | N2 | + validation, révocation, journal ; gère les Masques |
 | `n1` | N1 | idem, gère aussi les N2 |
-| `admin` | Admin | tout : gère tous les grades, seul à voir l'email des comptes |
 | `revoque` | Révoqué | aucun accès |
 
 La sécurité est portée par [firestore.rules](firestore.rules) ; l'interface ne fait que masquer les écrans.
 N1 et N2 ne modifient qu'une fiche de rang strictement inférieur au leur et n'attribuent qu'un grade strictement inférieur.
-Personne ne modifie son propre rôle, admin compris.
+Personne ne modifie son propre rôle, sauf un admin (voir ci-dessous).
+
+### Droit d'administration
+
+« Admin » n'est pas un grade : c'est un droit à part, rangé dans `users/{uid}/prive/droits` (`{ admin: true }`).
+Un admin a tous les droits quel que soit son grade affiché, et il est seul à voir l'email des comptes.
+
+- Le droit est **invisible** : la zone privée n'est lisible que par le joueur et par les admins. Les autres voient le grade RP, rien de plus.
+- Seul un admin le donne ou le retire (page Membres, colonne « Admin »), jamais à lui-même. Rien n'est écrit au journal.
+- N1 et N2 ne peuvent ni changer le grade d'un admin, ni corriger son solde, ni le retirer du groupe.
+- Un admin choisit son propre grade affiché. Révoquer ou supprimer un joueur lui retire le droit.
+- Une fiche encore à l'ancien grade `role: "admin"` reste reconnue comme admin ; à sa connexion, un écran lui fait choisir son grade RP
+  et crée son droit privé dans la même écriture.
 Le journal d'audit est en ajout seul pour tout le monde.
 
 ## Retrait d'un joueur
@@ -165,7 +177,7 @@ Une commande close n'est plus modifiable et aucune commande ne se supprime (coll
 
 Seules des informations RP sont affichées et stockées dans la fiche publique `users/{uid}` (nom RP, téléphone en jeu, grade, présence).
 Le nom et la photo Google ne sont jamais enregistrés. L'email du compte est dans `users/{uid}/prive/compte`,
-lisible par le joueur lui-même et par l'admin uniquement.
+lisible par le joueur lui-même et par les admins uniquement.
 
 ## Présence
 

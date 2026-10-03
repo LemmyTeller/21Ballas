@@ -17,7 +17,8 @@ service cloud.firestore {
       return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Doit rester aligné sur RANGS dans src/lib/roles.ts
+    // Doit rester aligné sur RANGS dans src/lib/roles.ts.
+    // 'admin' n'est plus un grade attribuable : il ne subsiste que sur les fiches pas encore migrées.
     function rank(role) {
       return {
         'revoque': -1,
@@ -30,8 +31,29 @@ service cloud.firestore {
       }[role];
     }
 
+    // ---- Droit d'administration : séparé du grade, et invisible ----
+    // Il vit dans la zone privée users/{uid}/prive/droits ({ admin: true }), que seuls le joueur et les admins
+    // peuvent lire. Le grade affiché (role) reste le grade RP : un admin peut être un simple Masque noir.
+
+    function droitAdmin(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)/prive/droits)
+        && get(/databases/$(database)/documents/users/$(uid)/prive/droits).data.admin == true;
+    }
+
+    // Admin : compte validé qui porte le droit privé, ou fiche encore à l'ancien grade 'admin'
+    function isAdmin() {
+      return hasProfile()
+        && (myRole() == 'admin' || (rank(myRole()) >= 1 && droitAdmin(request.auth.uid)));
+    }
+
+    // La fiche visée est-elle celle d'un admin ? (`role` : son grade actuel)
+    function cibleAdmin(uid, role) {
+      return role == 'admin' || droitAdmin(uid);
+    }
+
+    // Un admin a le rang le plus haut, quel que soit son grade affiché
     function myRank() {
-      return rank(myRole());
+      return isAdmin() ? 5 : rank(myRole());
     }
 
     // Compte validé (ni pending, ni revoque)
@@ -47,10 +69,6 @@ service cloud.firestore {
     // N2, N1, admin : ceux qui gèrent les membres
     function isGrade() {
       return hasProfile() && myRank() >= 3;
-    }
-
-    function isAdmin() {
-      return hasProfile() && myRole() == 'admin';
     }
 
     function shortString(value, max) {
@@ -251,16 +269,21 @@ service cloud.firestore {
           )
         )
         // Gradé : uniquement le rôle des autres (jamais le sien).
-        // Hors admin, la cible et le grade attribué doivent être strictement sous son propre rang.
+        // Hors admin, la cible et le grade attribué doivent être strictement sous son propre rang,
+        // et la cible ne doit pas être un admin, même affiché avec un petit grade.
         || (
           isGrade()
           && request.auth.uid != uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                ['role', 'validatedBy', 'validatedAt', 'raisonRevocation'])
-          && request.resource.data.role in ['membre', 'officier', 'n2', 'n1', 'admin', 'revoque']
+          && request.resource.data.role in ['membre', 'officier', 'n2', 'n1', 'revoque']
           && (
             isAdmin()
-            || (rank(resource.data.role) < myRank() && rank(request.resource.data.role) < myRank())
+            || (
+              !cibleAdmin(uid, resource.data.role)
+              && rank(resource.data.role) < myRank()
+              && rank(request.resource.data.role) < myRank()
+            )
           )
           // Une révocation porte toujours sa raison ; un compte actif n'en garde aucune
           && (
@@ -276,29 +299,61 @@ service cloud.firestore {
           isGrade()
           && request.auth.uid != uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['compteBancaire'])
-          && (isAdmin() || rank(resource.data.role) < myRank())
+          && (isAdmin() || (!cibleAdmin(uid, resource.data.role) && rank(resource.data.role) < myRank()))
           && soldeValide(request.resource.data)
+        )
+        // Admin : son propre grade, qui n'est plus qu'un affichage RP. Le droit admin doit exister une fois
+        // l'écriture faite : c'est aussi ce qui permet à une fiche encore au grade 'admin' de migrer, en créant
+        // son droit privé dans la même écriture groupée.
+        || (
+          isAdmin()
+          && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'validatedBy', 'validatedAt'])
+          && request.resource.data.role in ['membre', 'officier', 'n2', 'n1']
+          && request.resource.data.validatedBy == request.auth.uid
+          && request.resource.data.validatedAt == request.time
+          && existsAfter(/databases/$(database)/documents/users/$(uid)/prive/droits)
+          && getAfter(/databases/$(database)/documents/users/$(uid)/prive/droits).data.admin == true
         );
 
       // Suppression définitive (mort, départ de l'île) : mêmes droits que la révocation
       allow delete: if isGrade()
         && request.auth.uid != uid
-        && (isAdmin() || rank(resource.data.role) < myRank());
+        && (isAdmin() || (!cibleAdmin(uid, resource.data.role) && rank(resource.data.role) < myRank()));
 
-      // Données personnelles du compte : le joueur lui-même et l'admin uniquement
+      // Zone privée : lisible par le joueur lui-même et par les admins uniquement
       match /prive/{docId} {
         allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
 
-        // Effacée en même temps que la fiche, par celui qui a le droit de supprimer le joueur
+        // Effacée en même temps que la fiche, par celui qui a le droit de supprimer le joueur.
+        // Un admin retire aussi par là le droit admin d'un autre.
         allow delete: if isGrade()
           && request.auth.uid != uid
-          && (isAdmin() || rank(get(/databases/$(database)/documents/users/$(uid)).data.role) < myRank());
+          && (
+            isAdmin()
+            || (
+              !cibleAdmin(uid, get(/databases/$(database)/documents/users/$(uid)).data.role)
+              && rank(get(/databases/$(database)/documents/users/$(uid)).data.role) < myRank()
+            )
+          );
 
+        // compte : l'email du compte, écrit par le joueur lui-même
         allow create, update: if signedIn()
           && request.auth.uid == uid
           && docId == 'compte'
           && request.resource.data.keys().hasOnly(['email'])
           && request.resource.data.email == request.auth.token.email;
+
+        // droits : le droit d'administration. Donné ou retiré par un admin à un autre que lui ;
+        // ou créé pour soi-même par une fiche encore à l'ancien grade 'admin' (migration).
+        allow create, update: if signedIn()
+          && docId == 'droits'
+          && request.resource.data.keys().hasOnly(['admin'])
+          && request.resource.data.admin is bool
+          && (
+            (isAdmin() && request.auth.uid != uid)
+            || (request.auth.uid == uid && hasProfile() && myRole() == 'admin' && request.resource.data.admin == true)
+          );
       }
     }
 

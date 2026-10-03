@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useMembre } from '../auth/AuthContext'
 import { Avatar, Button, Card, Chargement, ErrorMessage, RoleBadge, inputClass } from '../components/ui'
-import { changerRole, lireEmailPrive, revoquer, supprimerJoueur } from '../features/members/api'
+import {
+  changerRole,
+  changerSonGrade,
+  definirAdmin,
+  lireDroitAdmin,
+  lireEmailPrive,
+  revoquer,
+  supprimerJoueur,
+} from '../features/members/api'
 import { SortieModal } from '../features/members/SortieModal'
 import { useMembres } from '../features/members/useMembres'
 import {
   ROLE_LABELS,
   aAuMoins,
+  aLeDroitAdmin,
   estValide,
   formatDate,
   nomAffiche,
@@ -22,9 +31,9 @@ export function Membres() {
   const { data, loading, error } = useMembres()
   const [erreurAction, setErreurAction] = useState<string | null>(null)
   const [sortie, setSortie] = useState<{ cible: Membre; raisons: Exclude<RaisonSortie, 'refus'>[] } | null>(null)
-  const estGrade = aAuMoins(moi.role, 'n2')
-  const estAdmin = moi.role === 'admin'
-  const roles = rolesAttribuables(moi.role)
+  const estGrade = aAuMoins(moi, 'n2')
+  const estAdmin = aLeDroitAdmin(moi)
+  const roles = rolesAttribuables(moi)
 
   const valides = data
     .filter((m) => estValide(m.role))
@@ -93,6 +102,7 @@ export function Membres() {
                   <th className="pb-2 font-medium">Téléphone</th>
                   <th className="pb-2 font-medium">Grade</th>
                   <th className="pb-2 font-medium">Arrivée</th>
+                  {estAdmin && <th className="pb-2 font-medium">Admin</th>}
                   {estGrade && <th className="pb-2 font-medium">Actions</th>}
                 </tr>
               </thead>
@@ -107,9 +117,34 @@ export function Membres() {
                       <RoleBadge role={m.role} />
                     </td>
                     <td className="py-2.5 pr-4 text-zinc-400">{formatDate(m.validatedAt ?? m.createdAt)}</td>
+                    {estAdmin && (
+                      <td className="py-2.5 pr-4">
+                        <CaseAdmin membre={m} moi={m.uid === moi.uid} onErreur={setErreurAction} />
+                      </td>
+                    )}
                     {estGrade && (
                       <td className="py-2.5">
-                        {!peutGerer(moi, m) ? (
+                        {estAdmin && m.uid === moi.uid ? (
+                          // Le grade d'un admin n'est qu'un affichage RP : il le choisit lui-même
+                          <select
+                            aria-label="Mon grade"
+                            className={`${inputClass} w-auto py-1`}
+                            value={m.role}
+                            onChange={(e) => {
+                              const role = e.target.value as Exclude<Role, 'revoque'>
+                              executer(
+                                () => changerSonGrade(moi.uid, role),
+                                `Passer ton grade affiché à ${ROLE_LABELS[role]} ?`,
+                              )
+                            }}
+                          >
+                            {roles.map((r) => (
+                              <option key={r} value={r}>
+                                {ROLE_LABELS[r]}
+                              </option>
+                            ))}
+                          </select>
+                        ) : !peutGerer(moi, m) ? (
                           <span className="text-xs text-zinc-600">{m.uid === moi.uid ? 'Toi' : '—'}</span>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -199,6 +234,59 @@ function Identite({ membre, avecEmail }: { membre: Membre; avecEmail: boolean })
         {avecEmail && <EmailPrive uid={membre.uid} />}
       </div>
     </div>
+  )
+}
+
+// Rendu uniquement pour un admin : droit d'administration d'un membre, invisible des autres grades.
+// Sa propre case reste figée : personne ne se retire le droit à soi-même.
+function CaseAdmin({
+  membre,
+  moi,
+  onErreur,
+}: {
+  membre: Membre
+  moi: boolean
+  onErreur: (message: string | null) => void
+}) {
+  // null : pas encore lu
+  const [admin, setAdmin] = useState<boolean | null>(moi ? true : null)
+
+  useEffect(() => {
+    if (moi) return
+    let actif = true
+    lireDroitAdmin(membre.uid)
+      .then((valeur) => actif && setAdmin(valeur))
+      .catch(() => actif && setAdmin(false))
+    return () => {
+      actif = false
+    }
+  }, [membre.uid, moi])
+
+  async function basculer(valeur: boolean) {
+    const question = valeur
+      ? `Donner le droit admin à ${nomAffiche(membre)} ? Il pourra tout faire, quel que soit son grade.`
+      : `Retirer le droit admin à ${nomAffiche(membre)} ?`
+    if (!window.confirm(question)) return
+    onErreur(null)
+    setAdmin(valeur)
+    try {
+      await definirAdmin(membre.uid, valeur)
+    } catch (e) {
+      setAdmin(!valeur)
+      onErreur((e as Error).message)
+    }
+  }
+
+  return (
+    <input
+      type="checkbox"
+      aria-label={`Droit admin de ${nomAffiche(membre)}`}
+      title={moi ? 'Tu ne peux pas te retirer le droit admin' : 'Visible par les admins uniquement'}
+      className="size-4 accent-purple-600"
+      checked={admin === true}
+      disabled={moi || admin === null}
+      onChange={(e) => basculer(e.target.checked)}
+    />
   )
 }
 
