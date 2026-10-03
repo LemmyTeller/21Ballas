@@ -16,6 +16,7 @@ const LIENS: { to: string; label: string; minimum: Role }[] = [
   { to: '/stock', label: 'Stock', minimum: 'membre' },
   { to: '/tarifs', label: 'Tarifs', minimum: 'membre' },
   { to: '/commerce', label: 'Commerce', minimum: 'membre' },
+  { to: '/annuaire', label: 'Annuaire', minimum: 'membre' },
   { to: '/inventaire', label: 'Inventaire', minimum: 'n2' },
   { to: '/journal', label: 'Journal', minimum: 'n2' },
 ]
@@ -25,6 +26,7 @@ const LARGEURS: Record<string, string> = {
   '/': 'max-w-7xl',
   '/tarifs': 'max-w-7xl',
   '/commerce': 'max-w-7xl',
+  '/annuaire': 'max-w-7xl',
   '/stock': 'max-w-[110rem]',
 }
 

@@ -7,6 +7,7 @@ import { Button, CenteredScreen, Chargement, ErrorMessage, Logo } from './compon
 import { AppLayout } from './layout/AppLayout'
 import { auth } from './lib/firebase'
 import { Accueil } from './pages/Accueil'
+import { Annuaire } from './pages/Annuaire'
 import { Commerce } from './pages/Commerce'
 import { Gestion } from './pages/Gestion'
 import { Inventaire } from './pages/Inventaire'
@@ -47,6 +48,7 @@ function Portail() {
           <Route path="stock" element={<Stock />} />
           <Route path="tarifs" element={<Tarifs />} />
           <Route path="commerce" element={<Commerce />} />
+          <Route path="annuaire" element={<Annuaire />} />
           <Route path="profil" element={<Profil />} />
           <Route
             path="inventaire"

@@ -8,6 +8,16 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.12.0',
+    date: '2026-10-03',
+    changements: [
+      'Nouvel onglet Annuaire : nom, téléphone, rôle et informations des contacts, rattachés à un groupe, une petite main ou une entreprise.',
+      'Recherche par nom, téléphone, rôle ou organisation, et filtres par type.',
+      'Nouveau type de partenaire : Entreprise, disponible aussi dans Tarifs.',
+      'Tarifs : les contacts d’un partenaire s’affichent sous son nom.',
+    ],
+  },
+  {
     version: '0.11.0',
     date: '2026-10-03',
     changements: [

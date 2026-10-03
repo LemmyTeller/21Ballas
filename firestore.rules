@@ -121,9 +121,21 @@ service cloud.firestore {
         && data.keys().hasAll(['nom', 'type', 'telephone', 'note', 'createdAt'])
         && shortString(data.nom, 60)
         && data.nom.size() > 0
-        && data.type in ['groupe', 'pm']
+        && data.type in ['groupe', 'pm', 'entreprise']
         && shortString(data.telephone, 20)
         && shortString(data.note, 300);
+    }
+
+    function contactValide(data) {
+      return data.keys().hasOnly(['nom', 'telephone', 'role', 'partenaireId', 'informations', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['nom', 'telephone', 'role', 'partenaireId', 'informations', 'createdAt', 'updatedAt'])
+        && shortString(data.nom, 60)
+        && data.nom.size() > 0
+        && shortString(data.telephone, 20)
+        && shortString(data.role, 60)
+        && (data.partenaireId == null || data.partenaireId is string)
+        && shortString(data.informations, 1000)
+        && data.updatedAt == request.time;
     }
 
     // Prix facultatif : absent (null) ou nombre positif
@@ -319,6 +331,19 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
       allow update: if isGrade()
         && partenaireValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isGrade();
+    }
+
+    // ---- Annuaire : contacts RP, rattachés ou non à un partenaire ----
+
+    match /contacts/{id} {
+      allow read: if isValide();
+      allow create: if isGrade()
+        && contactValide(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isGrade()
+        && contactValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if isGrade();
     }

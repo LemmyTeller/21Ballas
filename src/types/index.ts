@@ -60,8 +60,22 @@ export interface Article {
   updatedAt: Timestamp | null
 }
 
-// Interlocuteur commercial du groupe : un autre groupe, ou une petite main (PM)
-export type TypePartenaire = 'groupe' | 'pm'
+// Organisation avec laquelle le groupe traite : un autre groupe, une petite main (PM) ou une entreprise
+export type TypePartenaire = 'groupe' | 'pm' | 'entreprise'
+
+// Fiche de l'Annuaire : un personnage, comment le joindre, et sa place dans son organisation
+export interface Contact {
+  id: string
+  nom: string
+  telephone: string
+  // Texte libre : Chef, Bras droit, Vendeur, Patron…
+  role: string
+  // null : contact sans rattachement
+  partenaireId: string | null
+  informations: string
+  createdAt: Timestamp | null
+  updatedAt: Timestamp | null
+}
 
 export interface Partenaire {
   id: string

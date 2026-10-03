@@ -4,7 +4,8 @@ import { ImageItem } from '../components/ImageItem'
 import { Button, Card, Chargement, ErrorMessage } from '../components/ui'
 import { CommandeLigneModal } from '../features/commerce/CommandeLigneModal'
 import { useCommandes } from '../features/commerce/useCommandes'
-import { TYPE_LABELS } from '../features/tarifs/api'
+import { useContacts } from '../features/annuaire/useContacts'
+import { TYPES_PARTENAIRE, TYPE_LABELS, TYPE_PLURIELS } from '../features/tarifs/api'
 import { PartenaireModal } from '../features/tarifs/PartenaireModal'
 import { TarifModal } from '../features/tarifs/TarifModal'
 import { usePartenaires } from '../features/tarifs/usePartenaires'
@@ -57,6 +58,9 @@ export function Tarifs() {
   const [menu, setMenu] = useState<{ tarif: Tarif; droite: number; haut: number } | null>(null)
   // Pour proposer de compléter une vente ou un achat déjà en cours avec le partenaire
   const commandes = useCommandes()
+  const contacts = useContacts()
+  const contactsDe = (partenaire: Partenaire) =>
+    contacts.data.filter((c) => c.partenaireId === partenaire.id).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
 
   const estGrade = aAuMoins(moi.role, 'n2')
   const chargement = partenaires.loading || tarifs.loading || articles.loading || lieux.loading || !catalogue.items
@@ -80,10 +84,10 @@ export function Tarifs() {
   function liste(type: TypePartenaire, titre: string) {
     const membres = tries.filter((p) => p.type === type)
     return (
-      <div>
+      <div key={type}>
         <p className="mb-1 text-xs font-medium tracking-wide text-zinc-500 uppercase">{titre}</p>
         {membres.length === 0 ? (
-          <p className="px-2 py-1 text-sm text-zinc-600">Aucun</p>
+          <p className="px-2 py-1 text-sm text-zinc-600">—</p>
         ) : (
           <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
             {membres.map((p) => (
@@ -130,8 +134,7 @@ export function Tarifs() {
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
           <Card className="space-y-4 p-4!">
-            {liste('groupe', 'Groupes')}
-            {liste('pm', 'Petites mains')}
+            {TYPES_PARTENAIRE.map((type) => liste(type, TYPE_PLURIELS[type]))}
           </Card>
 
           {selection && (
@@ -146,6 +149,18 @@ export function Tarifs() {
                   </p>
                   {selection.telephone && <p className="text-sm text-zinc-400">Tél. {selection.telephone}</p>}
                   {selection.note && <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-400">{selection.note}</p>}
+                  {/* Contacts de l'Annuaire rattachés à ce partenaire */}
+                  {contactsDe(selection).length > 0 && (
+                    <ul className="mt-2 space-y-0.5 text-sm">
+                      {contactsDe(selection).map((c) => (
+                        <li key={c.id} className="text-zinc-300">
+                          <span className="font-medium text-zinc-100">{c.nom}</span>
+                          {c.role && <span className="text-zinc-500"> · {c.role}</span>}
+                          {c.telephone && <span> · {c.telephone}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 {estGrade && (
                   <Button variant="ghost" onClick={() => setFenetre({ type: 'partenaire', partenaire: selection })}>

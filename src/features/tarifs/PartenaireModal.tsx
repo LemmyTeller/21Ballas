@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import type { Partenaire, Tarif, TypePartenaire } from '../../types'
-import { TYPE_LABELS, creerPartenaire, majPartenaire, supprimerPartenaire } from './api'
+import { TYPES_PARTENAIRE, TYPE_LABELS, creerPartenaire, majPartenaire, supprimerPartenaire } from './api'
 
 // Création (sans `partenaire`) ou modification. `onCree` reçoit l'id du nouveau partenaire, pour le sélectionner.
 export function PartenaireModal({
@@ -70,8 +70,11 @@ export function PartenaireModal({
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">Type</span>
           <select className={inputClass} value={type} onChange={(e) => setType(e.target.value as TypePartenaire)}>
-            <option value="groupe">{TYPE_LABELS.groupe}</option>
-            <option value="pm">{TYPE_LABELS.pm}</option>
+            {TYPES_PARTENAIRE.map((t) => (
+              <option key={t} value={t}>
+                {TYPE_LABELS[t]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="block space-y-1 text-sm">

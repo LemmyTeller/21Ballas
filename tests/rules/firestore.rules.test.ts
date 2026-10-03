@@ -488,6 +488,53 @@ describe('tarifs', () => {
   })
 })
 
+describe('annuaire', () => {
+  const contact = (champs: Record<string, unknown> = {}) => ({
+    nom: 'Marcus Reed',
+    telephone: '5550142',
+    role: 'Chef',
+    partenaireId: null,
+    informations: '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...champs,
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'contacts', 'k1'), {
+        nom: 'Lena Cruz',
+        telephone: '',
+        role: '',
+        partenaireId: 'p1',
+        informations: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    })
+  })
+
+  it('tous les comptes validés consultent', async () => {
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'contacts')))
+    await assertFails(getDocs(collection(dbDe('attente'), 'contacts')))
+  })
+  it('seuls les gradés ajoutent, modifient et suppriment', async () => {
+    await assertFails(setDoc(doc(dbDe('violet'), 'contacts', 'k2'), contact()))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'contacts', 'k2'), contact({ partenaireId: 'p1' })))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'contacts', 'k1'), { role: 'Patron', updatedAt: serverTimestamp() }))
+    await assertSucceeds(updateDoc(doc(dbDe('n1'), 'contacts', 'k1'), { partenaireId: null, updatedAt: serverTimestamp() }))
+    await assertFails(deleteDoc(doc(dbDe('violet'), 'contacts', 'k1')))
+    await assertSucceeds(deleteDoc(doc(dbDe('admin'), 'contacts', 'k1')))
+  })
+  it('un contact a toujours un nom', async () => {
+    await assertFails(setDoc(doc(dbDe('n2'), 'contacts', 'k3'), contact({ nom: '' })))
+  })
+  it('un partenaire peut être une entreprise', async () => {
+    const entreprise = { nom: 'Benny’s', type: 'entreprise', telephone: '', note: '', createdAt: serverTimestamp() }
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'partenaires', 'e1'), entreprise))
+  })
+})
+
 describe('commerce', () => {
   const ligne = { reference: '12', sens: 'vente', quantite: 100, prixPropre: 50, prixSale: null }
   const commande = (uid: string, statut = 'en_attente') => ({

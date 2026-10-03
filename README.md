@@ -80,11 +80,18 @@ tous deux facultatifs.
 
 | Collection | Contenu | Lecture | Écriture |
 |---|---|---|---|
-| `partenaires` | nom, type (`groupe` ou `pm`), téléphone, note | membres validés | Admin, N1, N2 |
+| `partenaires` | nom, type (`groupe`, `pm` ou `entreprise`), téléphone, note | membres validés | Admin, N1, N2 |
 | `tarifs` | partenaire, item ou arme, sens (`achat` / `vente`), prix propre, prix sale, note | membres validés | Admin, N1, N2 |
 
 L'identifiant d'une ligne est `<partenaire>_<sens>_<item>` : un item ne figure qu'une fois par partenaire et par sens.
 Supprimer un partenaire supprime sa grille.
+
+## Annuaire
+
+Onglet **Annuaire**, visible par tous les membres validés ; Admin, N1 et N2 ajoutent, modifient et suppriment.
+Un contact (collection `contacts`) porte un nom, un téléphone, un rôle en texte libre, des informations, et peut être rattaché
+à un partenaire. Les partenaires sont ceux des Tarifs, avec un troisième type, `entreprise`.
+Supprimer un partenaire conserve ses contacts, qui passent sans rattachement.
 
 ## Commerce (ventes et achats)
 
