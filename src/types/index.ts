@@ -131,7 +131,54 @@ export interface Contrat {
   createdAt: Timestamp | null
 }
 
-export type StatutCommande ='en_attente' | 'validee' | 'annulee'
+export type GenreCommerce = 'standard' | 'securise' | 'express'
+
+// Commerce de la ville capable de blanchir de l'argent sale, repéré par son code postal (zip)
+export interface CommerceVille {
+  id: string
+  zip: string
+  nom: string
+  description: string
+  // 'ballas' : à nous ; id d'un partenaire : à ce groupe ; null : propriétaire inconnu
+  proprietaireId: string | null
+  // Standard, sécurisé ou express. Absent sur les premières fiches, qui n'avaient que `securise`.
+  genre?: GenreCommerce
+  // Conservé pour les premières fiches ; vaut toujours `genre === 'securise'` sur les nouvelles
+  securise: boolean
+  // Part récupérée en propre, en % : 80 → 10 000 $ de sale rendent 8 000 $ de propre. null : inconnu
+  taux: number | null
+  // Temps de blanchiment ; null : inconnu
+  dureeMinutes: number | null
+  // Montant maximal d'argent sale que le commerce peut blanchir en une fois ; null ou absent : inconnu
+  montantMax?: number | null
+  note: string
+  createdAt: Timestamp | null
+  updatedAt: Timestamp | null
+}
+
+// Dépôt d'argent sale dans un de nos commerces. Taux et durée sont ceux retenus au lancement.
+export interface Blanchiment {
+  id: string
+  commerceId: string
+  // Nom au moment du lancement : l'historique reste lisible si le commerce est supprimé
+  commerceNom: string
+  montant: number
+  taux: number
+  dureeMinutes: number
+  debut: Timestamp
+  fin: Timestamp
+  // Lieu d'où sont sortis les billets de 1$ ; null si le stock n'a pas été touché
+  lieuId: string | null
+  statut: 'en_cours' | 'recupere'
+  lanceParUid: string
+  createdAt: Timestamp | null
+  // Renseignés à la récupération
+  montantRecupere?: number
+  recupereParUid?: string
+  recupereAt?: Timestamp | null
+}
+
+export type StatutCommande = 'en_attente' | 'validee' | 'annulee'
 
 // Item commandé : vendu (`sens: 'vente'`) ou acheté (`sens: 'achat'`) au partenaire.
 // Les prix unitaires sont ceux du tarif au moment de l'ajout.

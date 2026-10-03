@@ -517,6 +517,87 @@ describe('saisie journalière', () => {
   })
 })
 
+describe('blanchiment', () => {
+  const commerce = (champs: Record<string, unknown> = {}) => ({
+    zip: '9118',
+    nom: '',
+    description: '',
+    proprietaireId: 'ballas',
+    securise: true,
+    taux: 80,
+    dureeMinutes: 120,
+    note: '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...champs,
+  })
+  const depot = (uid: string, champs: Record<string, unknown> = {}) => ({
+    commerceId: 'co1',
+    commerceNom: 'Commerce 9118',
+    montant: 10000,
+    taux: 80,
+    dureeMinutes: 120,
+    debut: new Date(2026, 9, 3, 20, 0),
+    fin: new Date(2026, 9, 3, 22, 0),
+    lieuId: null,
+    statut: 'en_cours',
+    lanceParUid: uid,
+    createdAt: serverTimestamp(),
+    ...champs,
+  })
+  const recuperation = (uid: string) => ({
+    statut: 'recupere',
+    montantRecupere: 8000,
+    recupereParUid: uid,
+    recupereAt: serverTimestamp(),
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, 'commerces', 'co1'), { ...commerce(), createdAt: new Date(), updatedAt: new Date() })
+      await setDoc(doc(db, 'blanchiments', 'b1'), { ...depot('n1'), createdAt: new Date() })
+      await setDoc(doc(db, 'blanchiments', 'fini'), { ...depot('n1'), statut: 'recupere', createdAt: new Date() })
+    })
+  })
+
+  it('tous les comptes validés consultent commerces et dépôts', async () => {
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'commerces')))
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'blanchiments')))
+    await assertFails(getDocs(collection(dbDe('attente'), 'commerces')))
+  })
+  it('seuls les gradés recensent les commerces', async () => {
+    await assertFails(setDoc(doc(dbDe('violet'), 'commerces', 'co2'), commerce()))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'commerces', 'co2'), commerce({ proprietaireId: null, taux: null })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'commerces', 'co3'), commerce({ zip: '' })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'commerces', 'co4'), commerce({ taux: 150 })))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'commerces', 'co5'), commerce({ montantMax: 50000 })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'commerces', 'co6'), commerce({ montantMax: -1 })))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'commerces', 'co7'), commerce({ genre: 'express', securise: false })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'commerces', 'co8'), commerce({ genre: 'luxe' })))
+    await assertSucceeds(updateDoc(doc(dbDe('n1'), 'commerces', 'co1'), { taux: 75, updatedAt: serverTimestamp() }))
+    await assertFails(deleteDoc(doc(dbDe('noir'), 'commerces', 'co1')))
+  })
+  it('seuls les gradés lancent un dépôt, en leur nom', async () => {
+    await assertFails(setDoc(doc(dbDe('violet'), 'blanchiments', 'b2'), depot('violet')))
+    await assertFails(setDoc(doc(dbDe('n2'), 'blanchiments', 'b3'), depot('n1')))
+    await assertFails(setDoc(doc(dbDe('n2'), 'blanchiments', 'b4'), depot('n2', { montant: 0 })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'blanchiments', 'b5'), depot('n2', { statut: 'recupere' })))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'blanchiments', 'b6'), depot('n2', { lieuId: 'qg' })))
+  })
+  it('récupération par un gradé, puis plus aucun changement', async () => {
+    await assertFails(updateDoc(doc(dbDe('violet'), 'blanchiments', 'b1'), recuperation('violet')))
+    await assertFails(updateDoc(doc(dbDe('n2'), 'blanchiments', 'b1'), { ...recuperation('n2'), montant: 1 }))
+    await assertSucceeds(updateDoc(doc(dbDe('n2'), 'blanchiments', 'b1'), recuperation('n2')))
+    await assertFails(updateDoc(doc(dbDe('admin'), 'blanchiments', 'fini'), recuperation('admin')))
+    await assertFails(deleteDoc(doc(dbDe('admin'), 'blanchiments', 'fini')))
+  })
+  it('un dépôt en cours s’annule (suppression) par un gradé uniquement', async () => {
+    await assertFails(deleteDoc(doc(dbDe('violet'), 'blanchiments', 'b1')))
+    await assertSucceeds(deleteDoc(doc(dbDe('n2'), 'blanchiments', 'b1')))
+  })
+})
+
 describe('contrats', () => {
   const contrat = (champs: Record<string, unknown> = {}) => ({
     libelle: 'Philippe',

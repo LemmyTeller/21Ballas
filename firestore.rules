@@ -128,6 +128,34 @@ service cloud.firestore {
         && shortString(data.note, 300);
     }
 
+    // Nombre facultatif compris entre deux bornes
+    function nombreOuNul(valeur, min, max) {
+      return valeur == null || (valeur is number && valeur >= min && valeur <= max);
+    }
+
+    function commerceValide(data) {
+      return data.keys().hasOnly(
+               ['zip', 'nom', 'description', 'proprietaireId', 'securise', 'genre', 'taux', 'dureeMinutes',
+                'montantMax', 'note', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(
+               ['zip', 'nom', 'description', 'proprietaireId', 'securise', 'taux', 'dureeMinutes', 'note',
+                'createdAt', 'updatedAt'])
+        && shortString(data.zip, 10)
+        && data.zip.size() > 0
+        && shortString(data.nom, 60)
+        && shortString(data.description, 300)
+        && (data.proprietaireId == null || data.proprietaireId is string)
+        && data.securise is bool
+        // Genre du commerce : facultatif, absent sur les fiches créées avant (alors déduit de `securise`)
+        && (!('genre' in data) || data.genre in ['standard', 'securise', 'express'])
+        && nombreOuNul(data.taux, 0, 100)
+        && nombreOuNul(data.dureeMinutes, 0, 100000)
+        // Montant maximal blanchissable en une fois : facultatif, absent sur les fiches créées avant
+        && (!('montantMax' in data) || nombreOuNul(data.montantMax, 0, 1000000000000))
+        && shortString(data.note, 300)
+        && data.updatedAt == request.time;
+    }
+
     function contratValide(data) {
       return data.keys().hasOnly(['libelle', 'montant', 'echeance', 'heureFixee', 'hebdo', 'paye', 'note', 'createdAt'])
         && data.keys().hasAll(['libelle', 'montant', 'echeance', 'heureFixee', 'paye', 'note', 'createdAt'])
@@ -350,6 +378,60 @@ service cloud.firestore {
         && request.resource.data.quantites is map
         && request.resource.data.updatedAt == request.time;
       allow delete: if false;
+    }
+
+    // ---- Blanchiment : commerces recensés en ville, et dépôts d'argent sale dans les nôtres ----
+
+    match /commerces/{id} {
+      allow read: if isValide();
+      allow create: if isGrade()
+        && commerceValide(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isGrade()
+        && commerceValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isGrade();
+    }
+
+    // Un dépôt est lancé, puis récupéré une fois le temps écoulé. Récupéré, il ne change plus (historique).
+    // Tant qu'il est en cours, un gradé peut l'annuler, ce qui le supprime.
+    match /blanchiments/{id} {
+      allow read: if isValide();
+
+      allow create: if isGrade()
+        && request.resource.data.keys().hasOnly(
+             ['commerceId', 'commerceNom', 'montant', 'taux', 'dureeMinutes', 'debut', 'fin', 'lieuId',
+              'statut', 'lanceParUid', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['commerceId', 'commerceNom', 'montant', 'taux', 'dureeMinutes', 'debut', 'fin', 'lieuId',
+              'statut', 'lanceParUid', 'createdAt'])
+        && request.resource.data.commerceId is string
+        && shortString(request.resource.data.commerceNom, 80)
+        && request.resource.data.montant is number
+        && request.resource.data.montant > 0
+        && request.resource.data.taux is number
+        && request.resource.data.taux >= 0
+        && request.resource.data.taux <= 100
+        && request.resource.data.dureeMinutes is number
+        && request.resource.data.dureeMinutes >= 0
+        && request.resource.data.debut is timestamp
+        && request.resource.data.fin is timestamp
+        && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
+        && request.resource.data.statut == 'en_cours'
+        && request.resource.data.lanceParUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isGrade()
+        && resource.data.statut == 'en_cours'
+        && request.resource.data.statut == 'recupere'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['statut', 'montantRecupere', 'recupereParUid', 'recupereAt'])
+        && request.resource.data.montantRecupere is number
+        && request.resource.data.montantRecupere >= 0
+        && request.resource.data.recupereParUid == request.auth.uid
+        && request.resource.data.recupereAt == request.time;
+
+      allow delete: if isGrade() && resource.data.statut == 'en_cours';
     }
 
     // ---- Contrats : sommes que le groupe doit payer, avec une échéance ----

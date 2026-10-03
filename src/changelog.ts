@@ -8,6 +8,19 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.15.0',
+    date: '2026-10-03',
+    changements: [
+      'Nouvel onglet Blanchiment : les commerces recensés en ville, par zip, avec le groupe qui les tient.',
+      'Nos commerces en premier, avec l’état du blanchiment : libre, en cours (temps restant) ou prêt à récupérer.',
+      'Lancer un blanchiment : montant, taux et durée ; l’appli calcule le propre attendu et l’heure de fin, et sort les billets de 1$ du stock.',
+      'Un commerce est standard, sécurisé ou express.',
+      'Chaque commerce peut avoir un montant maximal blanchissable : un dépôt ne peut pas le dépasser.',
+      'Historique des blanchiments récupérés.',
+      'Accueil : petit encart des blanchiments en cours (zip, type, en cours ou terminé).',
+    ],
+  },
+  {
     version: '0.14.0',
     date: '2026-10-03',
     changements: [

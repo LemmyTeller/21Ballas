@@ -5,6 +5,7 @@ import { Avatar, Button, Card, Chargement, ErrorMessage, RoleBadge } from '../co
 import { supprimerAnnonce } from '../features/annonces/api'
 import { NouvelleAnnonceDialog } from '../features/annonces/NouvelleAnnonceDialog'
 import { useAnnonces } from '../features/annonces/useAnnonces'
+import { BlanchimentsEnCours } from '../features/blanchiment/BlanchimentsEnCours'
 import { Contrats } from '../features/contrats/Contrats'
 import { basculerPresence } from '../features/members/api'
 import { useMembres } from '../features/members/useMembres'
@@ -45,10 +46,11 @@ export function Accueil() {
             <Annonces membre={membre} membres={membres.data} />
             <Joueurs moi={membre} membres={membres.data} />
           </div>
-          {/* Calés en bas de page : la saisie du butin du jour à gauche, les contrats à droite,
-              dans une colonne de la même largeur que la liste de présence */}
-          <div className="mt-auto grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
+          {/* Calés en bas de page : la saisie du butin du jour à gauche, puis les blanchiments en cours et
+              les contrats, chacun dans une colonne de la même largeur que la liste de présence */}
+          <div className="mt-auto grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[minmax(0,1fr)_19rem_19rem]">
             <SaisieJournaliere />
+            <BlanchimentsEnCours />
             <Contrats membre={membre} />
           </div>
         </>

@@ -104,6 +104,20 @@ Visibles par tous, gérés par Admin, N1 et N2. Vert : payé ; orange : échéan
 Un contrat peut être hebdomadaire (`hebdo`) : `echeance` et `paye` portent alors sur l'échéance en cours, et une fois celle-ci payée
 et passée, celle de la semaine suivante devient due (`echeanceCourante` dans `src/features/contrats/api.ts`), sans tâche planifiée.
 
+## Blanchiment
+
+Onglet **Blanchiment**, visible par tous les membres validés ; Admin, N1 et N2 recensent les commerces et gèrent les dépôts.
+
+- `commerces` : commerces de la ville qui blanchissent l'argent sale, repérés par leur zip. `proprietaireId` vaut `'ballas'`
+  (à nous, `PROPRIETAIRE_NOUS`), l'id d'un partenaire, ou `null` si le propriétaire est inconnu. Un commerce est de genre
+  `standard`, `securise` ou `express` (`genre`). Taux, durée et montant maximal blanchissable (`montantMax`) sont facultatifs.
+- `blanchiments` : dépôts d'argent sale dans nos commerces, un seul en cours par commerce. Le **taux est la part récupérée** :
+  80 % → 10 000 $ de sale rendent 8 000 $ de propre.
+
+Un dépôt est lancé (les billets de 1$ sortent du stock du lieu choisi, dans la même écriture), puis récupéré une fois le temps écoulé :
+il passe alors dans l'historique et ne change plus. « Prêt à récupérer » se déduit de l'heure de fin, sans tâche planifiée.
+Un dépôt en cours peut être annulé : il est supprimé et les billets retournent dans le stock.
+
 ## Annuaire
 
 Onglet **Annuaire**, visible par tous les membres validés ; Admin, N1 et N2 ajoutent, modifient et suppriment.
