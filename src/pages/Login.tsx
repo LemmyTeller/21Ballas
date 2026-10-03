@@ -26,7 +26,7 @@ export function Login() {
     <CenteredScreen>
       <Logo />
       <p className="text-sm text-zinc-400">
-        Accès réservé aux membres du groupe. Après ta première connexion, un chef doit valider ton compte.
+        Accès réservé aux membres du groupe. Après ta première connexion, un gradé doit valider ton compte.
       </p>
       <ErrorMessage>{erreur}</ErrorMessage>
       <Button className="w-full py-2.5" onClick={connexion} disabled={enCours}>

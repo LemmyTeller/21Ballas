@@ -13,7 +13,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-0 text-zinc-200 backdrop:bg-black/70"
+      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-l-4 border-zinc-800 border-l-purple-600 bg-zinc-900 p-0 text-zinc-200 backdrop:bg-black/70"
     >
       <div className="space-y-3 p-6">
         <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>

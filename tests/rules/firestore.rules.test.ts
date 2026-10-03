@@ -427,6 +427,55 @@ describe('stock', () => {
   })
 })
 
+describe('tâches', () => {
+  const tache = (uid: string) => ({
+    titre: 'Ravitailler le QG',
+    ordre: 1,
+    fait: false,
+    auteurUid: uid,
+    createdAt: serverTimestamp(),
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'taches', 't1'), {
+        titre: 'Recruter',
+        ordre: 1,
+        fait: false,
+        auteurUid: 'n1',
+        createdAt: new Date(),
+      })
+    })
+  })
+
+  it('lecture par les comptes validés', async () => {
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'taches')))
+    await assertFails(getDocs(collection(dbDe('attente'), 'taches')))
+  })
+  it('les gradés créent, cochent, réordonnent et suppriment', async () => {
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'taches', 't2'), tache('n2')))
+    await assertSucceeds(updateDoc(doc(dbDe('n2'), 'taches', 't1'), { fait: true }))
+    await assertSucceeds(updateDoc(doc(dbDe('admin'), 'taches', 't1'), { ordre: 5 }))
+    await assertSucceeds(deleteDoc(doc(dbDe('n1'), 'taches', 't1')))
+  })
+  it('tout membre validé coche et décoche, sans rien changer d’autre', async () => {
+    await assertSucceeds(updateDoc(doc(dbDe('noir'), 'taches', 't1'), { fait: true }))
+    await assertSucceeds(updateDoc(doc(dbDe('violet'), 'taches', 't1'), { fait: false }))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'taches', 't1'), { fait: true, titre: 'Autre' }))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'taches', 't1'), { ordre: 9 }))
+    await assertFails(updateDoc(doc(dbDe('attente'), 'taches', 't1'), { fait: true }))
+  })
+  it('les Masques ne créent ni ne suppriment de tâche', async () => {
+    await assertFails(setDoc(doc(dbDe('violet'), 'taches', 't3'), tache('violet')))
+    await assertFails(deleteDoc(doc(dbDe('noir'), 'taches', 't1')))
+  })
+  it('une tâche se crée en son propre nom, avec un titre', async () => {
+    await assertFails(setDoc(doc(dbDe('n2'), 'taches', 't4'), tache('n1')))
+    await assertFails(setDoc(doc(dbDe('n2'), 'taches', 't5'), { ...tache('n2'), titre: '' }))
+    await assertFails(updateDoc(doc(dbDe('n2'), 'taches', 't1'), { fait: 'oui' }))
+  })
+})
+
 describe('annonces', () => {
   const annonce = (uid: string) => ({
     titre: 'Titre',

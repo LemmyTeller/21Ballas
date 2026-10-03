@@ -7,6 +7,7 @@ import { NouvelleAnnonceDialog } from '../features/annonces/NouvelleAnnonceDialo
 import { useAnnonces } from '../features/annonces/useAnnonces'
 import { basculerPresence } from '../features/members/api'
 import { useMembres } from '../features/members/useMembres'
+import { Taches } from '../features/taches/Taches'
 import { estPresent, useMaintenant } from '../lib/presence'
 import { aAuMoins, estValide, formatDate, nomAffiche, rang } from '../lib/roles'
 import type { Annonce, Membre } from '../types'
@@ -19,11 +20,6 @@ export function Accueil() {
 
   return (
     <>
-      <header>
-        <h1 className="text-2xl font-bold text-zinc-50">Bienvenue, {nomAffiche(membre)}</h1>
-        <p className="text-sm text-zinc-400">Intranet des Ballas — 21 JumpClick</p>
-      </header>
-
       {estGrade && enAttente > 0 && (
         <Link
           to="/membres"
@@ -38,7 +34,9 @@ export function Accueil() {
       {membres.loading ? (
         <Chargement />
       ) : (
-        <div className="grid items-start gap-6 lg:grid-cols-2">
+        // Tâches et annonces se partagent la largeur restante, encart de présence étroit calé à droite
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_19rem]">
+          <Taches membre={membre} />
           <Annonces membre={membre} membres={membres.data} />
           <Joueurs moi={membre} membres={membres.data} />
         </div>
@@ -70,7 +68,8 @@ function Joueurs({ moi, membres }: { moi: Membre; membres: Membre[] }) {
 
   return (
     <Card
-      title={`Joueurs · ${presents} présent${presents > 1 ? 's' : ''} / ${joueurs.length}`}
+      className="p-4!"
+      title={`${presents} / ${joueurs.length}`}
       action={
         <Button variant={jeSuisPresent ? 'ghost' : 'primary'} onClick={basculer}>
           {jeSuisPresent ? 'Je ne suis plus présent' : 'Je suis présent'}
@@ -80,7 +79,7 @@ function Joueurs({ moi, membres }: { moi: Membre; membres: Membre[] }) {
       <ErrorMessage>{erreur}</ErrorMessage>
       <ul className="divide-y divide-zinc-800">
         {joueurs.map(({ membre, present }) => (
-          <li key={membre.uid} className="flex items-center gap-3 py-2.5">
+          <li key={membre.uid} className="flex items-center gap-3 py-2">
             <Avatar name={nomAffiche(membre)} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-zinc-100">{nomAffiche(membre)}</p>

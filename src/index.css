@@ -1,4 +1,11 @@
 @import 'tailwindcss';
+/* Police embarquée dans l'appli : aucun appel à un service externe */
+@import '@fontsource/permanent-marker/latin-400.css';
+
+@theme {
+  /* Titres de pages : marqueur, comme un tag */
+  --font-tag: 'Permanent Marker', 'Segoe Print', cursive;
+}
 
 :root {
   color-scheme: dark;
@@ -7,4 +14,20 @@
 
 body {
   @apply bg-zinc-950 text-zinc-200 antialiased;
+}
+
+/* Hors des couches Tailwind, volontairement : cette règle l'emporte sur les utilitaires posés sur chaque titre,
+   ce qui donne le même style à tous les titres de page sans retoucher chaque page. */
+h1 {
+  display: inline-block;
+  font-family: var(--font-tag);
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--color-purple-400);
+  text-shadow:
+    3px 3px 0 #000,
+    0 0 22px rgb(168 85 247 / 0.45);
+  transform: rotate(-1.5deg);
+  transform-origin: left center;
 }

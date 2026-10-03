@@ -101,7 +101,11 @@ export function AppLayout() {
       </aside>
       {changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
       <main className="min-w-0 flex-1 p-4 md:p-8">
-        <div className={`mx-auto space-y-6 ${PAGES_LARGES.includes(pathname) ? 'max-w-[110rem]' : 'max-w-5xl'}`}>
+        <div
+          className={`mx-auto space-y-6 ${
+            PAGES_LARGES.includes(pathname) ? 'max-w-[110rem]' : pathname === '/' ? 'max-w-7xl' : 'max-w-5xl'
+          }`}
+        >
           <Outlet />
         </div>
       </main>

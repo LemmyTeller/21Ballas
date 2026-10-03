@@ -38,7 +38,7 @@ export function Card({
   className?: string
 }) {
   return (
-    <section className={`rounded-xl border border-zinc-800 bg-zinc-900 p-5 ${className}`}>
+    <section className={`rounded-xl border border-l-4 border-zinc-800 border-l-purple-600 bg-zinc-900 p-5 ${className}`}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title && <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>}
@@ -88,7 +88,9 @@ export function ErrorMessage({ children }: { children: ReactNode }) {
 export function CenteredScreen({ children }: { children: ReactNode }) {
   return (
     <main className="flex min-h-svh items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-5 rounded-2xl border border-zinc-800 bg-zinc-900 p-8">{children}</div>
+      <div className="w-full max-w-md space-y-5 rounded-2xl border border-l-4 border-zinc-800 border-l-purple-600 bg-zinc-900 p-8">
+        {children}
+      </div>
     </main>
   )
 }

@@ -91,6 +91,16 @@ export interface Reference {
   dossier: 'items' | 'weapons'
 }
 
+// Tâche à réaliser par le groupe. `ordre` croissant = priorité décroissante.
+export interface Tache {
+  id: string
+  titre: string
+  ordre: number
+  fait: boolean
+  auteurUid: string
+  createdAt: Timestamp | null
+}
+
 export interface Annonce {
   id: string
   titre: string

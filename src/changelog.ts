@@ -8,6 +8,15 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.8.0',
+    date: '2026-10-03',
+    changements: [
+      'Accueil : nouveau module Tâches. Les gradés ajoutent des tâches et règlent leur priorité avec les flèches ; tout le monde peut les cocher une fois réalisées.',
+      'Accueil : le titre de bienvenue disparaît et l’encart des présents est plus compact, à droite.',
+      'Nouveau style : titres de page au marqueur et bande mauve à gauche des encarts.',
+    ],
+  },
+  {
     version: '0.7.0',
     date: '2026-10-03',
     changements: [

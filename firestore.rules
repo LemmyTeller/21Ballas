@@ -91,6 +91,16 @@ service cloud.firestore {
         && data.capacite <= 200;
     }
 
+    function tacheValide(data) {
+      return data.keys().hasOnly(['titre', 'ordre', 'fait', 'auteurUid', 'createdAt'])
+        && data.keys().hasAll(['titre', 'ordre', 'fait', 'auteurUid', 'createdAt'])
+        && shortString(data.titre, 200)
+        && data.titre.size() > 0
+        && data.ordre is number
+        && data.fait is bool
+        && data.auteurUid is string;
+    }
+
     function categorieValide(data) {
       return data.keys().hasOnly(['nom', 'createdAt'])
         && data.keys().hasAll(['nom', 'createdAt'])
@@ -267,6 +277,30 @@ service cloud.firestore {
     match /prixArticles/{id} {
       allow read, delete: if isGrade();
       allow create, update: if isGrade() && prixValide(request.resource.data);
+    }
+
+    // ---- Tâches du groupe : lues et cochées par tous, gérées par les gradés ----
+
+    match /taches/{id} {
+      allow read: if isValide();
+      allow create: if isGrade()
+        && tacheValide(request.resource.data)
+        && request.resource.data.auteurUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update: if
+        (
+          isGrade()
+          && tacheValide(request.resource.data)
+          && request.resource.data.auteurUid == resource.data.auteurUid
+          && request.resource.data.createdAt == resource.data.createdAt
+        )
+        // Tout membre validé peut cocher ou décocher une tâche, sans rien changer d'autre
+        || (
+          isValide()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fait'])
+          && request.resource.data.fait is bool
+        );
+      allow delete: if isGrade();
     }
 
     // ---- Annonces ----
