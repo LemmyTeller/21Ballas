@@ -8,6 +8,26 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.10.0',
+    date: '2026-10-03',
+    changements: [
+      'Tarifs : le bouton « ⋯ » d’une ligne crée une vente ou un achat avec une quantité, ou complète la commande déjà en cours avec le partenaire.',
+      'Nouvel onglet Commerce : ventes et achats en attente, puis historique des commandes validées ou annulées.',
+      'Validation par un gradé : montant final en propre et en sale, items repris ou donnés en échange, et mise à jour automatique du stock du lieu choisi.',
+      'Tarifs : « On lui vend » affiche la quantité en stock et la valeur totale vendable ; les lignes suivent l’ordre d’ajout.',
+    ],
+  },
+  {
+    version: '0.9.0',
+    date: '2026-10-03',
+    changements: [
+      'Nouvel onglet Tarifs : pour chaque groupe et petite main, ce qu’on lui achète et ce qu’on lui vend.',
+      'Deux prix par ligne, en propre et en sale (billets de 1$), chacun facultatif.',
+      'Les gradés gèrent les partenaires et les prix ; tout le monde peut les consulter.',
+      'Stock : les prix d’achat et de vente sont retirés, ils se gèrent désormais dans Tarifs.',
+    ],
+  },
+  {
     version: '0.8.0',
     date: '2026-10-03',
     changements: [

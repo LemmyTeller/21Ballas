@@ -398,32 +398,158 @@ describe('stock', () => {
     await assertSucceeds(getDocs(collection(dbDe('noir'), 'articles')))
     await assertFails(getDocs(collection(dbDe('attente'), 'articles')))
   })
-  it('les prix ne sont lisibles que par les gradés', async () => {
-    await assertFails(getDoc(doc(dbDe('noir'), 'prixArticles', '12')))
-    await assertFails(getDoc(doc(dbDe('violet'), 'prixArticles', '12')))
-    await assertFails(getDocs(collection(dbDe('violet'), 'prixArticles')))
-    await assertSucceeds(getDoc(doc(dbDe('n2'), 'prixArticles', '12')))
-  })
-  it('seuls les gradés modifient catégories, articles et prix', async () => {
+  it('seuls les gradés modifient catégories et articles', async () => {
     await assertFails(setDoc(doc(dbDe('violet'), 'categoriesStock', 'c2'), categorie()))
     await assertFails(setDoc(doc(dbDe('violet'), 'articles', '13'), article()))
     await assertFails(updateDoc(doc(dbDe('violet'), 'articles', '12'), { 'quantites.qg': 99, updatedAt: serverTimestamp() }))
-    await assertFails(setDoc(doc(dbDe('violet'), 'prixArticles', '12'), { prixAchat: 1, prixVente: null }))
     await assertSucceeds(setDoc(doc(dbDe('n2'), 'categoriesStock', 'c2'), categorie()))
     await assertSucceeds(setDoc(doc(dbDe('n2'), 'articles', '13'), article()))
     await assertSucceeds(updateDoc(doc(dbDe('n2'), 'articles', '12'), { 'quantites.qg': 9, updatedAt: serverTimestamp() }))
-    await assertSucceeds(setDoc(doc(dbDe('n1'), 'prixArticles', '13'), { prixAchat: 50, prixVente: 80 }))
     await assertSucceeds(deleteDoc(doc(dbDe('admin'), 'articles', '12')))
   })
   it('données invalides refusées', async () => {
     await assertFails(setDoc(doc(dbDe('n2'), 'categoriesStock', 'c3'), { nom: '', createdAt: serverTimestamp() }))
     await assertFails(setDoc(doc(dbDe('n2'), 'articles', '14'), article('beaucoup')))
-    await assertFails(setDoc(doc(dbDe('n2'), 'prixArticles', '14'), { prixAchat: -1, prixVente: null }))
-    await assertFails(setDoc(doc(dbDe('n2'), 'prixArticles', '14'), { prixAchat: 10 }))
   })
-  it('un article peut être enregistré sans aucun prix', async () => {
-    await assertSucceeds(setDoc(doc(dbDe('n2'), 'prixArticles', '15'), { prixAchat: null, prixVente: null }))
-    await assertSucceeds(setDoc(doc(dbDe('n2'), 'prixArticles', '16'), { prixAchat: null, prixVente: 80 }))
+  it('anciens prix du Stock : plus aucune écriture, lecture et nettoyage par les gradés', async () => {
+    await assertFails(getDoc(doc(dbDe('violet'), 'prixArticles', '12')))
+    await assertSucceeds(getDoc(doc(dbDe('n2'), 'prixArticles', '12')))
+    await assertFails(setDoc(doc(dbDe('admin'), 'prixArticles', '13'), { prixAchat: 50, prixVente: 80 }))
+    await assertFails(updateDoc(doc(dbDe('admin'), 'prixArticles', '12'), { prixAchat: 1 }))
+    await assertFails(deleteDoc(doc(dbDe('violet'), 'prixArticles', '12')))
+    await assertSucceeds(deleteDoc(doc(dbDe('n2'), 'prixArticles', '12')))
+  })
+})
+
+describe('tarifs', () => {
+  const partenaire = (type: unknown = 'groupe') => ({
+    nom: 'Vagos',
+    type,
+    telephone: '',
+    note: '',
+    createdAt: serverTimestamp(),
+  })
+  const tarif = (prixPropre: unknown = 100, prixSale: unknown = null) => ({
+    partenaireId: 'p1',
+    reference: '12',
+    sens: 'achat',
+    prixPropre,
+    prixSale,
+    note: '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  const modif = (champs: Record<string, unknown>) => ({ ...champs, updatedAt: serverTimestamp() })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, 'partenaires', 'p1'), { nom: 'Vagos', type: 'groupe', telephone: '', note: '', createdAt: new Date() })
+      await setDoc(doc(db, 'tarifs', 'p1_vente_12'), {
+        partenaireId: 'p1',
+        reference: '12',
+        sens: 'vente',
+        prixPropre: 50,
+        prixSale: 80,
+        note: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    })
+  })
+
+  it('tous les comptes validés consultent partenaires et tarifs', async () => {
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'partenaires')))
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'tarifs')))
+    await assertFails(getDocs(collection(dbDe('attente'), 'tarifs')))
+  })
+  it('seuls les gradés gèrent les partenaires', async () => {
+    await assertFails(setDoc(doc(dbDe('violet'), 'partenaires', 'p2'), partenaire()))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'partenaires', 'p2'), partenaire('pm')))
+    await assertFails(setDoc(doc(dbDe('n2'), 'partenaires', 'p3'), partenaire('allie')))
+    await assertSucceeds(updateDoc(doc(dbDe('n1'), 'partenaires', 'p1'), { nom: 'Families' }))
+    await assertFails(deleteDoc(doc(dbDe('noir'), 'partenaires', 'p1')))
+    await assertSucceeds(deleteDoc(doc(dbDe('admin'), 'partenaires', 'p1')))
+  })
+  it('seuls les gradés gèrent les lignes, avec des prix facultatifs et positifs', async () => {
+    await assertFails(setDoc(doc(dbDe('violet'), 'tarifs', 'p1_achat_12'), tarif()))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'tarifs', 'p1_achat_12'), tarif()))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'tarifs', 'p1_achat_13'), tarif(null, null)))
+    await assertFails(setDoc(doc(dbDe('n2'), 'tarifs', 'p1_achat_14'), tarif(-5)))
+    await assertFails(setDoc(doc(dbDe('n2'), 'tarifs', 'p1_achat_15'), tarif('cher')))
+    await assertFails(updateDoc(doc(dbDe('violet'), 'tarifs', 'p1_vente_12'), modif({ prixSale: 1 })))
+    await assertSucceeds(updateDoc(doc(dbDe('n2'), 'tarifs', 'p1_vente_12'), modif({ prixSale: 90, prixPropre: null })))
+    await assertSucceeds(deleteDoc(doc(dbDe('n1'), 'tarifs', 'p1_vente_12')))
+  })
+  it('une ligne ne change ni de partenaire, ni de sens, ni d’item', async () => {
+    await assertFails(updateDoc(doc(dbDe('admin'), 'tarifs', 'p1_vente_12'), modif({ sens: 'achat' })))
+    await assertFails(updateDoc(doc(dbDe('admin'), 'tarifs', 'p1_vente_12'), modif({ reference: '99' })))
+    await assertFails(updateDoc(doc(dbDe('admin'), 'tarifs', 'p1_vente_12'), modif({ partenaireId: 'p2' })))
+  })
+})
+
+describe('commerce', () => {
+  const ligne = { reference: '12', quantite: 100, prixPropre: 50, prixSale: null }
+  const commande = (uid: string, statut = 'en_attente') => ({
+    partenaireId: 'p1',
+    partenaireNom: 'Vagos',
+    sens: 'vente',
+    statut,
+    lignes: [ligne],
+    creeParUid: uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  const cloture = (uid: string, statut: string) => ({
+    statut,
+    montantPropre: null,
+    montantSale: 2500,
+    echanges: [{ reference: '40', quantite: 50 }],
+    lieuId: 'qg',
+    note: '',
+    clotureParUid: uid,
+    clotureAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const base = { partenaireId: 'p1', partenaireNom: 'Vagos', sens: 'vente', lignes: [ligne], creeParUid: 'noir' }
+      const dates = { createdAt: new Date(), updatedAt: new Date() }
+      await setDoc(doc(ctx.firestore(), 'commandes', 'c1'), { ...base, ...dates, statut: 'en_attente' })
+      await setDoc(doc(ctx.firestore(), 'commandes', 'close'), { ...base, ...dates, statut: 'validee' })
+    })
+  })
+
+  it('tout membre validé consulte et crée une commande en attente, en son nom', async () => {
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'commandes')))
+    await assertFails(getDocs(collection(dbDe('attente'), 'commandes')))
+    await assertSucceeds(setDoc(doc(dbDe('noir'), 'commandes', 'n1'), commande('noir')))
+    await assertFails(setDoc(doc(dbDe('noir'), 'commandes', 'n2'), commande('violet')))
+    await assertFails(setDoc(doc(dbDe('noir'), 'commandes', 'n3'), commande('noir', 'validee')))
+    await assertFails(setDoc(doc(dbDe('noir'), 'commandes', 'n4'), { ...commande('noir'), lignes: [] }))
+    await assertFails(setDoc(doc(dbDe('attente'), 'commandes', 'n5'), commande('attente')))
+  })
+  it('tout membre validé modifie les lignes d’une commande en attente, et rien d’autre', async () => {
+    const lignes = [ligne, { reference: '13', quantite: 2, prixPropre: null, prixSale: 10 }]
+    await assertSucceeds(updateDoc(doc(dbDe('violet'), 'commandes', 'c1'), { lignes, updatedAt: serverTimestamp() }))
+    await assertFails(updateDoc(doc(dbDe('violet'), 'commandes', 'c1'), { lignes: [], updatedAt: serverTimestamp() }))
+    await assertFails(
+      updateDoc(doc(dbDe('violet'), 'commandes', 'c1'), { partenaireNom: 'Autre', updatedAt: serverTimestamp() }),
+    )
+  })
+  it('seul un gradé valide ou annule, en son nom', async () => {
+    await assertFails(updateDoc(doc(dbDe('violet'), 'commandes', 'c1'), cloture('violet', 'validee')))
+    await assertFails(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), cloture('n1', 'validee')))
+    await assertFails(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), { ...cloture('n2', 'validee'), montantSale: -1 }))
+    await assertSucceeds(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), cloture('n2', 'validee')))
+  })
+  it('une commande close ne change plus et rien ne se supprime', async () => {
+    await assertFails(updateDoc(doc(dbDe('admin'), 'commandes', 'close'), cloture('admin', 'annulee')))
+    await assertFails(
+      updateDoc(doc(dbDe('admin'), 'commandes', 'close'), { lignes: [ligne], updatedAt: serverTimestamp() }),
+    )
+    await assertFails(deleteDoc(doc(dbDe('admin'), 'commandes', 'c1')))
   })
 })
 

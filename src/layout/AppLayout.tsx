@@ -14,14 +14,19 @@ const LIENS: { to: string; label: string; minimum: Role }[] = [
   { to: '/membres', label: 'Membres', minimum: 'membre' },
   { to: '/gestion', label: 'Gestion', minimum: 'membre' },
   { to: '/stock', label: 'Stock', minimum: 'membre' },
+  { to: '/tarifs', label: 'Tarifs', minimum: 'membre' },
+  { to: '/commerce', label: 'Commerce', minimum: 'membre' },
   { to: '/inventaire', label: 'Inventaire', minimum: 'n2' },
   { to: '/journal', label: 'Journal', minimum: 'n2' },
 ]
 
-const A_VENIR = ['Commerce']
-
-// Pages en grille de cartes, qui profitent de toute la largeur de l'écran
-const PAGES_LARGES = ['/stock']
+// Pages en grille de cartes, plus larges que les pages de tableaux
+const LARGEURS: Record<string, string> = {
+  '/': 'max-w-7xl',
+  '/tarifs': 'max-w-7xl',
+  '/commerce': 'max-w-7xl',
+  '/stock': 'max-w-[110rem]',
+}
 
 const lienBase = 'block whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors'
 
@@ -47,11 +52,6 @@ export function AppLayout() {
             >
               {l.label}
             </NavLink>
-          ))}
-          {A_VENIR.map((label) => (
-            <span key={label} className={`${lienBase} cursor-default text-zinc-600`} title="Bientôt disponible">
-              {label} <span className="text-xs">· à venir</span>
-            </span>
           ))}
         </nav>
         <div className="mt-auto flex items-center gap-3 md:flex-col md:items-stretch">
@@ -101,11 +101,7 @@ export function AppLayout() {
       </aside>
       {changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
       <main className="min-w-0 flex-1 p-4 md:p-8">
-        <div
-          className={`mx-auto space-y-6 ${
-            PAGES_LARGES.includes(pathname) ? 'max-w-[110rem]' : pathname === '/' ? 'max-w-7xl' : 'max-w-5xl'
-          }`}
-        >
+        <div className={`mx-auto space-y-6 ${LARGEURS[pathname] ?? 'max-w-5xl'}`}>
           <Outlet />
         </div>
       </main>

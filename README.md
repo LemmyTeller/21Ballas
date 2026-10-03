@@ -67,10 +67,44 @@ qui additionne tous les lieux. Les items viennent du catalogue (`src/data/items.
 |---|---|---|---|
 | `categoriesStock` | catégories, communes à tous les lieux | membres validés | Admin, N1, N2 |
 | `articles/{itemId}` | catégorie de l'item et quantité par lieu | membres validés | Admin, N1, N2 |
-| `prixArticles/{itemId}` | prix d'achat et prix de vente, tous deux facultatifs | Admin, N1, N2 | Admin, N1, N2 |
 
-Les prix n'apparaissent jamais dans les listes : uniquement dans la fenêtre de détail d'un article, pour les gradés.
+Le Stock ne porte aucun prix : ils se gèrent dans l'onglet Tarifs. La collection `prixArticles` date d'avant ce changement ;
+elle n'accepte plus d'écriture et se vide au fil des suppressions d'articles.
 Pas d'historique des mouvements pour l'instant. Un lieu qui contient du stock ne peut pas être supprimé.
+
+## Tarifs
+
+Onglet **Tarifs**, visible par tous les membres validés : la liste des partenaires (groupes et petites mains) et, pour chacun,
+ce qu'on lui achète et ce qu'on lui vend. Chaque ligne porte un prix en argent propre et un prix en argent sale (billets de 1$),
+tous deux facultatifs.
+
+| Collection | Contenu | Lecture | Écriture |
+|---|---|---|---|
+| `partenaires` | nom, type (`groupe` ou `pm`), téléphone, note | membres validés | Admin, N1, N2 |
+| `tarifs` | partenaire, item ou arme, sens (`achat` / `vente`), prix propre, prix sale, note | membres validés | Admin, N1, N2 |
+
+L'identifiant d'une ligne est `<partenaire>_<sens>_<item>` : un item ne figure qu'une fois par partenaire et par sens.
+Supprimer un partenaire supprime sa grille.
+
+## Commerce (ventes et achats)
+
+Une commande se crée depuis l'onglet Tarifs, par le bouton « ⋯ » d'une ligne : quantité, puis nouvelle commande ou ajout à celle
+déjà en attente avec le partenaire. L'onglet **Commerce** liste les commandes en cours et l'historique.
+
+| Étape | Qui | Effet |
+|---|---|---|
+| Création, ajout ou retrait de lignes | tout membre validé | commande `en_attente` ; les prix unitaires sont ceux du tarif au moment de l'ajout |
+| Validation | Admin, N1, N2 | montant final en propre et en sale, items en échange, lieu ; le stock du lieu est mis à jour dans la même écriture |
+| Annulation | Admin, N1, N2 | commande `annulee`, aucun effet sur le stock |
+
+Mise à jour du stock à la validation, dans le lieu choisi (aucune si « Ne pas toucher au stock ») :
+
+- **vente** : les items vendus sortent ; les items repris et l'argent sale entrent ;
+- **achat** : les items achetés entrent ; les items donnés et l'argent sale sortent.
+
+L'argent sale est l'item « Billet de 1$ » du catalogue (`REFERENCE_ARGENT_SALE`). L'argent propre n'est pas suivi dans le stock.
+Une quantité ne descend jamais sous zéro. Un item reçu qui n'était pas encore suivi entre au Stock dans « Sans catégorie ».
+Une commande close n'est plus modifiable et aucune commande ne se supprime (collection `commandes`).
 
 ## Données personnelles
 

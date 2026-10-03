@@ -60,11 +60,73 @@ export interface Article {
   updatedAt: Timestamp | null
 }
 
-// Lisible par les gradés uniquement (collection prixArticles)
-// Les deux prix sont facultatifs.
-export interface PrixArticle {
-  prixAchat: number | null
-  prixVente: number | null
+// Interlocuteur commercial du groupe : un autre groupe, ou une petite main (PM)
+export type TypePartenaire = 'groupe' | 'pm'
+
+export interface Partenaire {
+  id: string
+  nom: string
+  type: TypePartenaire
+  telephone: string
+  note: string
+  createdAt: Timestamp | null
+}
+
+// `achat` : on lui achète ; `vente` : on lui vend
+export type SensTarif = 'achat' | 'vente'
+
+// Ligne de la grille d'un partenaire. `reference` = clé du catalogue (voir Reference).
+// Prix en argent propre et en argent sale (billets de 1$), chacun facultatif.
+export interface Tarif {
+  id: string
+  partenaireId: string
+  reference: string
+  sens: SensTarif
+  prixPropre: number | null
+  prixSale: number | null
+  note: string
+  createdAt: Timestamp | null
+  updatedAt: Timestamp | null
+}
+
+export type StatutCommande = 'en_attente' | 'validee' | 'annulee'
+
+// Item commandé. Les prix unitaires sont ceux du tarif au moment de l'ajout.
+export interface LigneCommande {
+  reference: string
+  quantite: number
+  prixPropre: number | null
+  prixSale: number | null
+}
+
+// Item qui change de main en plus de l'argent : repris par le groupe lors d'une vente, donné lors d'un achat
+export interface Echange {
+  reference: string
+  quantite: number
+}
+
+// Vente (`sens: 'vente'`) ou achat (`sens: 'achat'`) en cours ou clos avec un partenaire.
+// Les champs de clôture ne sont renseignés qu'à la validation ou à l'annulation, par un gradé.
+export interface Commande {
+  id: string
+  partenaireId: string
+  // Nom au moment de la création : la commande reste lisible si le partenaire est supprimé
+  partenaireNom: string
+  sens: SensTarif
+  statut: StatutCommande
+  lignes: LigneCommande[]
+  creeParUid: string
+  createdAt: Timestamp | null
+  updatedAt: Timestamp | null
+  // Ce qui a réellement été payé, après négociation
+  montantPropre?: number | null
+  montantSale?: number | null
+  echanges?: Echange[]
+  // Lieu dont le stock a été mis à jour ; null si aucun
+  lieuId?: string | null
+  note?: string
+  clotureParUid?: string
+  clotureAt?: Timestamp | null
 }
 
 // Item du catalogue du serveur (src/data/items.json, généré par `npm run items`)

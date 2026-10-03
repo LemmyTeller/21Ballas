@@ -9,6 +9,7 @@ import { ArticleModal } from '../features/stock/ArticleModal'
 import { CategorieModal } from '../features/stock/CategorieModal'
 import { quantiteDans, useArticles } from '../features/stock/useArticles'
 import { useCategories } from '../features/stock/useCategories'
+import { ESPACE_INSECABLE, formatNombre, formatPoids } from '../lib/format'
 import { aAuMoins } from '../lib/roles'
 import { useReferences } from '../lib/useCatalogue'
 import type { Article, CategorieStock, Reference } from '../types'
@@ -23,17 +24,7 @@ type Fenetre =
 // Poids maximal que le groupe peut stocker, tous lieux confondus
 const POIDS_MAX_KG = 4200
 
-// Le séparateur de milliers français par défaut (espace fine insécable) se voit à peine :
-// on le remplace par une espace insécable de largeur normale.
-const ESPACE_FINE = String.fromCharCode(0x202f)
-const ESPACE_INSECABLE = String.fromCharCode(0xa0)
-const formateur = (decimales: number) => {
-  const intl = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: decimales })
-  return { format: (valeur: number) => intl.format(valeur).replaceAll(ESPACE_FINE, ESPACE_INSECABLE) }
-}
-const nombre = formateur(0)
-const kilos = formateur(1)
-const formatPoids = (kg: number) => `${kilos.format(kg)}${ESPACE_INSECABLE}kg`
+const nombre = { format: formatNombre }
 
 // 3 colonnes sur grand écran, 2 sur écran moyen, 1 en dessous
 function useNombreColonnes(): number {

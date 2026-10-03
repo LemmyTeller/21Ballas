@@ -7,6 +7,7 @@ import { Button, CenteredScreen, Chargement, ErrorMessage, Logo } from './compon
 import { AppLayout } from './layout/AppLayout'
 import { auth } from './lib/firebase'
 import { Accueil } from './pages/Accueil'
+import { Commerce } from './pages/Commerce'
 import { Gestion } from './pages/Gestion'
 import { Inventaire } from './pages/Inventaire'
 import { Journal } from './pages/Journal'
@@ -15,6 +16,7 @@ import { Membres } from './pages/Membres'
 import { Pending, Revoque } from './pages/Pending'
 import { Profil } from './pages/Profil'
 import { Stock } from './pages/Stock'
+import { Tarifs } from './pages/Tarifs'
 
 function Portail() {
   const { user, membre, loading, error } = useAuth()
@@ -43,6 +45,8 @@ function Portail() {
           <Route path="membres" element={<Membres />} />
           <Route path="gestion" element={<Gestion />} />
           <Route path="stock" element={<Stock />} />
+          <Route path="tarifs" element={<Tarifs />} />
+          <Route path="commerce" element={<Commerce />} />
           <Route path="profil" element={<Profil />} />
           <Route
             path="inventaire"

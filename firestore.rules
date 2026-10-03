@@ -116,11 +116,38 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
-    function prixValide(data) {
-      return data.keys().hasOnly(['prixAchat', 'prixVente'])
-        && data.keys().hasAll(['prixAchat', 'prixVente'])
-        && (data.prixAchat == null || (data.prixAchat is number && data.prixAchat >= 0))
-        && (data.prixVente == null || (data.prixVente is number && data.prixVente >= 0));
+    function partenaireValide(data) {
+      return data.keys().hasOnly(['nom', 'type', 'telephone', 'note', 'createdAt'])
+        && data.keys().hasAll(['nom', 'type', 'telephone', 'note', 'createdAt'])
+        && shortString(data.nom, 60)
+        && data.nom.size() > 0
+        && data.type in ['groupe', 'pm']
+        && shortString(data.telephone, 20)
+        && shortString(data.note, 300);
+    }
+
+    // Prix facultatif : absent (null) ou nombre positif
+    function prixOuNul(valeur) {
+      return valeur == null || (valeur is number && valeur >= 0);
+    }
+
+    function lignesValides(lignes) {
+      return lignes is list && lignes.size() >= 1 && lignes.size() <= 50;
+    }
+
+    function tarifValide(data) {
+      return data.keys().hasOnly(
+               ['partenaireId', 'reference', 'sens', 'prixPropre', 'prixSale', 'note', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(
+               ['partenaireId', 'reference', 'sens', 'prixPropre', 'prixSale', 'note', 'createdAt', 'updatedAt'])
+        && data.partenaireId is string
+        && shortString(data.reference, 30)
+        && data.reference.size() > 0
+        && data.sens in ['achat', 'vente']
+        && prixOuNul(data.prixPropre)
+        && prixOuNul(data.prixSale)
+        && shortString(data.note, 200)
+        && data.updatedAt == request.time;
     }
 
     // ---- Membres : fiche publique, uniquement des informations RP ----
@@ -273,10 +300,86 @@ service cloud.firestore {
       allow delete: if isGrade();
     }
 
-    // Prix à part des articles : illisibles pour un Masque, même en interrogeant la base
+    // Anciens prix du Stock, remplacés par les tarifs : plus aucune écriture, seulement le nettoyage par les gradés
     match /prixArticles/{id} {
       allow read, delete: if isGrade();
-      allow create, update: if isGrade() && prixValide(request.resource.data);
+    }
+
+    // ---- Tarifs : partenaires (groupes, petites mains) et leurs grilles d'achat / de vente ----
+
+    match /partenaires/{id} {
+      allow read: if isValide();
+      allow create: if isGrade()
+        && partenaireValide(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isGrade()
+        && partenaireValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isGrade();
+    }
+
+    // Une ligne par partenaire, sens et item : ces trois champs ne changent plus après la création
+    match /tarifs/{id} {
+      allow read: if isValide();
+      allow create: if isGrade()
+        && tarifValide(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isGrade()
+        && tarifValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.partenaireId == resource.data.partenaireId
+        && request.resource.data.reference == resource.data.reference
+        && request.resource.data.sens == resource.data.sens;
+      allow delete: if isGrade();
+    }
+
+    // ---- Commerce : ventes et achats avec un partenaire ----
+    // Tout membre validé crée une commande et en modifie les lignes tant qu'elle est en attente.
+    // Seul un gradé la clôt (validation ou annulation) ; une commande close ne change plus et rien ne se supprime.
+
+    match /commandes/{id} {
+      allow read: if isValide();
+
+      allow create: if isValide()
+        && request.resource.data.keys().hasOnly(
+             ['partenaireId', 'partenaireNom', 'sens', 'statut', 'lignes', 'creeParUid', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(
+             ['partenaireId', 'partenaireNom', 'sens', 'statut', 'lignes', 'creeParUid', 'createdAt', 'updatedAt'])
+        && request.resource.data.partenaireId is string
+        && shortString(request.resource.data.partenaireNom, 60)
+        && request.resource.data.sens in ['achat', 'vente']
+        && request.resource.data.statut == 'en_attente'
+        && lignesValides(request.resource.data.lignes)
+        && request.resource.data.creeParUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if resource.data.statut == 'en_attente'
+        && request.resource.data.updatedAt == request.time
+        && (
+          (
+            isValide()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lignes', 'updatedAt'])
+            && lignesValides(request.resource.data.lignes)
+          )
+          || (
+            isGrade()
+            && request.resource.data.statut in ['validee', 'annulee']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['statut', 'montantPropre', 'montantSale', 'echanges', 'lieuId', 'note',
+                  'clotureParUid', 'clotureAt', 'updatedAt'])
+            && prixOuNul(request.resource.data.montantPropre)
+            && prixOuNul(request.resource.data.montantSale)
+            && request.resource.data.echanges is list
+            && request.resource.data.echanges.size() <= 30
+            && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
+            && shortString(request.resource.data.note, 300)
+            && request.resource.data.clotureParUid == request.auth.uid
+            && request.resource.data.clotureAt == request.time
+          )
+        );
+
+      allow delete: if false;
     }
 
     // ---- Tâches du groupe : lues et cochées par tous, gérées par les gradés ----
