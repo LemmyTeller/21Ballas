@@ -6,16 +6,11 @@ import { quantiteDans } from '../stock/useArticles'
 // Item « Billet de 1$ » du catalogue : c'est lui qui représente l'argent sale dans le Stock
 export const REFERENCE_ARGENT_SALE = '71'
 
-export async function creerCommande(
-  partenaire: Partenaire,
-  sens: SensTarif,
-  ligne: LigneCommande,
-  creeParUid: string,
-): Promise<void> {
+export async function creerCommande(partenaire: Partenaire, ligne: LigneCommande, creeParUid: string): Promise<void> {
   await addDoc(collection(db, 'commandes'), {
     partenaireId: partenaire.id,
     partenaireNom: partenaire.nom,
-    sens,
+    sens: ligne.sens,
     statut: 'en_attente',
     lignes: [ligne],
     creeParUid,
@@ -24,9 +19,11 @@ export async function creerCommande(
   })
 }
 
-// Un item déjà présent dans la commande voit sa quantité augmenter et reprend le prix courant
+export const memeLigne = (a: LigneCommande, b: LigneCommande) => a.reference === b.reference && a.sens === b.sens
+
+// Un item déjà présent dans le même sens voit sa quantité augmenter et reprend le prix courant
 export function fusionnerLigne(lignes: LigneCommande[], ligne: LigneCommande): LigneCommande[] {
-  const existante = lignes.find((l) => l.reference === ligne.reference)
+  const existante = lignes.find((l) => memeLigne(l, ligne))
   if (!existante) return [...lignes, ligne]
   return lignes.map((l) => (l === existante ? { ...ligne, quantite: l.quantite + ligne.quantite } : l))
 }
@@ -35,25 +32,52 @@ export async function majLignes(commandeId: string, lignes: LigneCommande[]): Pr
   await updateDoc(doc(db, 'commandes', commandeId), { lignes, updatedAt: serverTimestamp() })
 }
 
+export const lignesDe = (commande: Pick<Commande, 'lignes'>, sens: SensTarif) =>
+  commande.lignes.filter((l) => l.sens === sens)
+
+// « Vente à », « Achat à » ou, si la commande mêle les deux, « Vente et achat avec »
+export function titreCommande(commande: Pick<Commande, 'lignes' | 'partenaireNom'>): string {
+  const vente = lignesDe(commande, 'vente').length > 0
+  const achat = lignesDe(commande, 'achat').length > 0
+  const prefixe = vente && achat ? 'Vente et achat avec' : achat ? 'Achat à' : 'Vente à'
+  return `${prefixe} ${commande.partenaireNom}`
+}
+
+// Règlement réel : ce que le groupe a reçu du partenaire et ce qu'il lui a donné
 export interface Cloture {
-  montantPropre: number | null
-  montantSale: number | null
-  echanges: Echange[]
+  recuPropre: number | null
+  recuSale: number | null
+  recuItems: Echange[]
+  payePropre: number | null
+  payeSale: number | null
+  payeItems: Echange[]
   lieuId: string | null
   note: string
 }
 
+const CLOTURE_VIDE: Cloture = {
+  recuPropre: null,
+  recuSale: null,
+  recuItems: [],
+  payePropre: null,
+  payeSale: null,
+  payeItems: [],
+  lieuId: null,
+  note: '',
+}
+
 // Variation de stock par item, dans le lieu choisi.
-// Vente : les items vendus sortent ; les items repris et l'argent sale (billets de 1$) entrent. Achat : l'inverse.
+// Sortent : les items vendus, les items donnés, l'argent sale payé (billets de 1$).
+// Entrent : les items achetés, les items repris, l'argent sale reçu.
 export function variationsStock(commande: Commande, cloture: Cloture): Map<string, number> {
-  const sortie = commande.sens === 'vente' ? -1 : 1
   const variations = new Map<string, number>()
   const ajouter = (reference: string, delta: number) =>
     variations.set(reference, (variations.get(reference) ?? 0) + delta)
 
-  for (const ligne of commande.lignes) ajouter(ligne.reference, sortie * ligne.quantite)
-  for (const echange of cloture.echanges) ajouter(echange.reference, -sortie * echange.quantite)
-  if (cloture.montantSale) ajouter(REFERENCE_ARGENT_SALE, -sortie * Math.round(cloture.montantSale))
+  for (const ligne of commande.lignes) ajouter(ligne.reference, ligne.sens === 'vente' ? -ligne.quantite : ligne.quantite)
+  for (const item of cloture.recuItems) ajouter(item.reference, item.quantite)
+  for (const item of cloture.payeItems) ajouter(item.reference, -item.quantite)
+  ajouter(REFERENCE_ARGENT_SALE, Math.round(cloture.recuSale ?? 0) - Math.round(cloture.payeSale ?? 0))
 
   for (const [reference, delta] of variations) if (delta === 0) variations.delete(reference)
   return variations
@@ -106,18 +130,14 @@ export async function validerCommande(
 export async function annulerCommande(commandeId: string, acteurUid: string): Promise<void> {
   await updateDoc(doc(db, 'commandes', commandeId), {
     statut: 'annulee',
-    montantPropre: null,
-    montantSale: null,
-    echanges: [],
-    lieuId: null,
-    note: '',
+    ...CLOTURE_VIDE,
     clotureParUid: acteurUid,
     clotureAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
 }
 
-// Montant attendu d'une commande dans une monnaie ; null si aucune ligne n'a de prix dans cette monnaie
+// Montant attendu de lignes dans une monnaie ; null si aucune n'a de prix dans cette monnaie
 export function montantAttendu(lignes: LigneCommande[], monnaie: 'prixPropre' | 'prixSale'): number | null {
   const chiffrees = lignes.filter((l) => l[monnaie] !== null)
   return chiffrees.length === 0 ? null : chiffrees.reduce((total, l) => total + l.quantite * (l[monnaie] ?? 0), 0)

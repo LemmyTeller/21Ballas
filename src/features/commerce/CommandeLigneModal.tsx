@@ -5,12 +5,21 @@ import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import { formatPrix } from '../../lib/format'
 import { formatDate } from '../../lib/roles'
 import type { Commande, Partenaire, Reference, Tarif } from '../../types'
-import { creerCommande, fusionnerLigne, majLignes } from './api'
+import { creerCommande, fusionnerLigne, lignesDe, majLignes, memeLigne } from './api'
 
 const NOUVELLE = 'nouvelle'
 
-// Depuis une ligne de tarif : met l'item, avec une quantité, dans une vente ou un achat.
-// Si une commande du même sens est déjà en attente avec ce partenaire, on propose de la compléter.
+// « 2 ventes, 1 achat »
+function contenu(commande: Commande): string {
+  const compte = (n: number, mot: string) => (n > 0 ? `${n} ${mot}${n > 1 ? 's' : ''}` : null)
+  return [compte(lignesDe(commande, 'vente').length, 'vente'), compte(lignesDe(commande, 'achat').length, 'achat')]
+    .filter(Boolean)
+    .join(', ')
+}
+
+// Depuis une ligne de tarif : met l'item, avec une quantité, dans une commande.
+// Si une commande est déjà en attente avec ce partenaire, on propose de la compléter : une même commande
+// peut mêler des ventes et des achats.
 export function CommandeLigneModal({
   partenaire,
   tarif,
@@ -28,7 +37,7 @@ export function CommandeLigneModal({
 }) {
   const vente = tarif.sens === 'vente'
   const enCours = commandes
-    .filter((c) => c.statut === 'en_attente' && c.partenaireId === partenaire.id && c.sens === tarif.sens)
+    .filter((c) => c.statut === 'en_attente' && c.partenaireId === partenaire.id)
     .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
 
   const [quantite, setQuantite] = useState('1')
@@ -37,20 +46,22 @@ export function CommandeLigneModal({
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
+  const ligne = {
+    reference: tarif.reference,
+    sens: tarif.sens,
+    quantite: Number(quantite),
+    prixPropre: tarif.prixPropre,
+    prixSale: tarif.prixSale,
+  }
+
   async function enregistrer(e: FormEvent) {
     e.preventDefault()
-    const ligne = {
-      reference: tarif.reference,
-      quantite: Number(quantite),
-      prixPropre: tarif.prixPropre,
-      prixSale: tarif.prixSale,
-    }
     setEnvoi(true)
     setErreur(null)
     try {
       const commande = enCours.find((c) => c.id === cible)
       if (commande) await majLignes(commande.id, fusionnerLigne(commande.lignes, ligne))
-      else await creerCommande(partenaire, tarif.sens, ligne, creeParUid)
+      else await creerCommande(partenaire, ligne, creeParUid)
       onClose()
     } catch (err) {
       setErreur((err as Error).message)
@@ -63,7 +74,7 @@ export function CommandeLigneModal({
   const inactif = 'border-zinc-800 hover:bg-zinc-800/50'
 
   return (
-    <Modal title={vente ? `Vente à ${partenaire.nom}` : `Achat à ${partenaire.nom}`} onClose={onClose}>
+    <Modal title={vente ? `Vendre à ${partenaire.nom}` : `Acheter à ${partenaire.nom}`} onClose={onClose}>
       <form onSubmit={enregistrer} className="space-y-3">
         <div className="flex items-center gap-3">
           <ImageItem item={reference} dossier={reference?.dossier} />
@@ -90,8 +101,8 @@ export function CommandeLigneModal({
 
         {enCours.length > 0 && (
           <fieldset className="space-y-2">
-            <legend className="mb-1 text-sm text-zinc-400">
-              {vente ? 'Une vente est déjà en cours' : 'Un achat est déjà en cours'} avec {partenaire.nom}
+            <legend className="mb-1 text-sm font-medium text-amber-200">
+              Une commande est en cours avec {partenaire.nom}
             </legend>
             {enCours.map((c) => (
               <label key={c.id} className={`${choix} ${cible === c.id ? actif : inactif}`}>
@@ -103,10 +114,12 @@ export function CommandeLigneModal({
                   onChange={() => setCible(c.id)}
                 />
                 <span>
-                  <span className="block font-medium text-zinc-100">Ajouter à la commande en cours</span>
+                  <span className="block font-medium text-zinc-100">
+                    Ajouter {vente ? 'cette vente' : 'cet achat'} à la commande en cours
+                  </span>
                   <span className="block text-xs text-zinc-400">
-                    Du {formatDate(c.createdAt, true)} · {c.lignes.length} ligne{c.lignes.length > 1 ? 's' : ''}
-                    {c.lignes.some((l) => l.reference === tarif.reference) && ' · contient déjà cet item, la quantité s’ajoute'}
+                    Du {formatDate(c.createdAt, true)} · {contenu(c)}
+                    {c.lignes.some((l) => memeLigne(l, ligne)) && ' · contient déjà cet item, la quantité s’ajoute'}
                   </span>
                 </span>
               </label>

@@ -135,6 +135,11 @@ service cloud.firestore {
       return lignes is list && lignes.size() >= 1 && lignes.size() <= 50;
     }
 
+    // Items échangés lors du règlement d'une commande
+    function itemsValides(items) {
+      return items is list && items.size() <= 30;
+    }
+
     function tarifValide(data) {
       return data.keys().hasOnly(
                ['partenaireId', 'reference', 'sens', 'prixPropre', 'prixSale', 'note', 'createdAt', 'updatedAt'])
@@ -333,7 +338,7 @@ service cloud.firestore {
       allow delete: if isGrade();
     }
 
-    // ---- Commerce : ventes et achats avec un partenaire ----
+    // ---- Commerce : commandes avec un partenaire, pouvant mêler ventes et achats ----
     // Tout membre validé crée une commande et en modifie les lignes tant qu'elle est en attente.
     // Seul un gradé la clôt (validation ou annulation) ; une commande close ne change plus et rien ne se supprime.
 
@@ -366,12 +371,14 @@ service cloud.firestore {
             isGrade()
             && request.resource.data.statut in ['validee', 'annulee']
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-                 ['statut', 'montantPropre', 'montantSale', 'echanges', 'lieuId', 'note',
-                  'clotureParUid', 'clotureAt', 'updatedAt'])
-            && prixOuNul(request.resource.data.montantPropre)
-            && prixOuNul(request.resource.data.montantSale)
-            && request.resource.data.echanges is list
-            && request.resource.data.echanges.size() <= 30
+                 ['statut', 'recuPropre', 'recuSale', 'recuItems', 'payePropre', 'payeSale', 'payeItems',
+                  'lieuId', 'note', 'clotureParUid', 'clotureAt', 'updatedAt'])
+            && prixOuNul(request.resource.data.recuPropre)
+            && prixOuNul(request.resource.data.recuSale)
+            && itemsValides(request.resource.data.recuItems)
+            && prixOuNul(request.resource.data.payePropre)
+            && prixOuNul(request.resource.data.payeSale)
+            && itemsValides(request.resource.data.payeItems)
             && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
             && shortString(request.resource.data.note, 300)
             && request.resource.data.clotureParUid == request.auth.uid

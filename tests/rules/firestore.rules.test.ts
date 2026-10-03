@@ -489,7 +489,7 @@ describe('tarifs', () => {
 })
 
 describe('commerce', () => {
-  const ligne = { reference: '12', quantite: 100, prixPropre: 50, prixSale: null }
+  const ligne = { reference: '12', sens: 'vente', quantite: 100, prixPropre: 50, prixSale: null }
   const commande = (uid: string, statut = 'en_attente') => ({
     partenaireId: 'p1',
     partenaireNom: 'Vagos',
@@ -502,9 +502,12 @@ describe('commerce', () => {
   })
   const cloture = (uid: string, statut: string) => ({
     statut,
-    montantPropre: null,
-    montantSale: 2500,
-    echanges: [{ reference: '40', quantite: 50 }],
+    recuPropre: null,
+    recuSale: 2500,
+    recuItems: [{ reference: '40', quantite: 50 }],
+    payePropre: null,
+    payeSale: null,
+    payeItems: [],
     lieuId: 'qg',
     note: '',
     clotureParUid: uid,
@@ -531,7 +534,8 @@ describe('commerce', () => {
     await assertFails(setDoc(doc(dbDe('attente'), 'commandes', 'n5'), commande('attente')))
   })
   it('tout membre validé modifie les lignes d’une commande en attente, et rien d’autre', async () => {
-    const lignes = [ligne, { reference: '13', quantite: 2, prixPropre: null, prixSale: 10 }]
+    // Une même commande peut mêler une vente et un achat
+    const lignes = [ligne, { reference: '13', sens: 'achat', quantite: 2, prixPropre: null, prixSale: 10 }]
     await assertSucceeds(updateDoc(doc(dbDe('violet'), 'commandes', 'c1'), { lignes, updatedAt: serverTimestamp() }))
     await assertFails(updateDoc(doc(dbDe('violet'), 'commandes', 'c1'), { lignes: [], updatedAt: serverTimestamp() }))
     await assertFails(
@@ -541,7 +545,8 @@ describe('commerce', () => {
   it('seul un gradé valide ou annule, en son nom', async () => {
     await assertFails(updateDoc(doc(dbDe('violet'), 'commandes', 'c1'), cloture('violet', 'validee')))
     await assertFails(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), cloture('n1', 'validee')))
-    await assertFails(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), { ...cloture('n2', 'validee'), montantSale: -1 }))
+    await assertFails(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), { ...cloture('n2', 'validee'), recuSale: -1 }))
+    await assertFails(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), { ...cloture('n2', 'validee'), payeItems: 'rien' }))
     await assertSucceeds(updateDoc(doc(dbDe('n2'), 'commandes', 'c1'), cloture('n2', 'validee')))
   })
   it('une commande close ne change plus et rien ne se supprime', async () => {

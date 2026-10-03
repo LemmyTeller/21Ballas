@@ -91,37 +91,43 @@ export interface Tarif {
 
 export type StatutCommande = 'en_attente' | 'validee' | 'annulee'
 
-// Item commandé. Les prix unitaires sont ceux du tarif au moment de l'ajout.
+// Item commandé : vendu (`sens: 'vente'`) ou acheté (`sens: 'achat'`) au partenaire.
+// Les prix unitaires sont ceux du tarif au moment de l'ajout.
 export interface LigneCommande {
   reference: string
+  sens: SensTarif
   quantite: number
   prixPropre: number | null
   prixSale: number | null
 }
 
-// Item qui change de main en plus de l'argent : repris par le groupe lors d'une vente, donné lors d'un achat
+// Item qui change de main en plus de l'argent, lors du règlement
 export interface Echange {
   reference: string
   quantite: number
 }
 
-// Vente (`sens: 'vente'`) ou achat (`sens: 'achat'`) en cours ou clos avec un partenaire.
+// Commande en cours ou close avec un partenaire. Elle peut mêler des ventes et des achats.
 // Les champs de clôture ne sont renseignés qu'à la validation ou à l'annulation, par un gradé.
 export interface Commande {
   id: string
   partenaireId: string
   // Nom au moment de la création : la commande reste lisible si le partenaire est supprimé
   partenaireNom: string
+  // Sens de la première ligne ; le sens réel est porté par chaque ligne
   sens: SensTarif
   statut: StatutCommande
   lignes: LigneCommande[]
   creeParUid: string
   createdAt: Timestamp | null
   updatedAt: Timestamp | null
-  // Ce qui a réellement été payé, après négociation
-  montantPropre?: number | null
-  montantSale?: number | null
-  echanges?: Echange[]
+  // Règlement réel, après négociation : ce que le groupe a reçu du partenaire, et ce qu'il lui a donné
+  recuPropre?: number | null
+  recuSale?: number | null
+  recuItems?: Echange[]
+  payePropre?: number | null
+  payeSale?: number | null
+  payeItems?: Echange[]
   // Lieu dont le stock a été mis à jour ; null si aucun
   lieuId?: string | null
   note?: string

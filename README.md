@@ -89,18 +89,19 @@ Supprimer un partenaire supprime sa grille.
 ## Commerce (ventes et achats)
 
 Une commande se crée depuis l'onglet Tarifs, par le bouton « ⋯ » d'une ligne : quantité, puis nouvelle commande ou ajout à celle
-déjà en attente avec le partenaire. L'onglet **Commerce** liste les commandes en cours et l'historique.
+déjà en attente avec le partenaire. Une même commande peut mêler des ventes et des achats : chaque ligne porte son sens.
+L'onglet **Commerce** liste les commandes en cours et l'historique.
 
 | Étape | Qui | Effet |
 |---|---|---|
 | Création, ajout ou retrait de lignes | tout membre validé | commande `en_attente` ; les prix unitaires sont ceux du tarif au moment de l'ajout |
-| Validation | Admin, N1, N2 | montant final en propre et en sale, items en échange, lieu ; le stock du lieu est mis à jour dans la même écriture |
+| Validation | Admin, N1, N2 | règlement réel : ce qu'on reçoit et ce qu'on donne (propre, sale, items), lieu ; le stock du lieu est mis à jour dans la même écriture |
 | Annulation | Admin, N1, N2 | commande `annulee`, aucun effet sur le stock |
 
 Mise à jour du stock à la validation, dans le lieu choisi (aucune si « Ne pas toucher au stock ») :
 
-- **vente** : les items vendus sortent ; les items repris et l'argent sale entrent ;
-- **achat** : les items achetés entrent ; les items donnés et l'argent sale sortent.
+- **sortent** : les items vendus, les items donnés en échange, l'argent sale donné ;
+- **entrent** : les items achetés, les items repris en échange, l'argent sale reçu.
 
 L'argent sale est l'item « Billet de 1$ » du catalogue (`REFERENCE_ARGENT_SALE`). L'argent propre n'est pas suivi dans le stock.
 Une quantité ne descend jamais sous zéro. Un item reçu qui n'était pas encore suivi entre au Stock dans « Sans catégorie ».
