@@ -1,0 +1,76 @@
+import { signOut } from 'firebase/auth'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { useAuth } from './auth/AuthContext'
+import { AuthProvider } from './auth/AuthProvider'
+import { RequireRole } from './auth/RequireRole'
+import { Button, CenteredScreen, Chargement, ErrorMessage, Logo } from './components/ui'
+import { AppLayout } from './layout/AppLayout'
+import { auth } from './lib/firebase'
+import { Accueil } from './pages/Accueil'
+import { Gestion } from './pages/Gestion'
+import { Inventaire } from './pages/Inventaire'
+import { Journal } from './pages/Journal'
+import { Login } from './pages/Login'
+import { Membres } from './pages/Membres'
+import { Pending, Revoque } from './pages/Pending'
+import { Profil } from './pages/Profil'
+import { Stock } from './pages/Stock'
+
+function Portail() {
+  const { user, membre, loading, error } = useAuth()
+
+  if (loading) return <Chargement pleinEcran />
+  if (!user) return <Login />
+  if (!membre) {
+    return (
+      <CenteredScreen>
+        <Logo />
+        <ErrorMessage>{error ?? 'Fiche membre introuvable.'}</ErrorMessage>
+        <Button variant="ghost" onClick={() => signOut(auth)}>
+          Se déconnecter
+        </Button>
+      </CenteredScreen>
+    )
+  }
+  if (membre.role === 'pending') return <Pending membre={membre} email={user.email} />
+  if (membre.role === 'revoque') return <Revoque membre={membre} email={user.email} />
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<Accueil />} />
+          <Route path="membres" element={<Membres />} />
+          <Route path="gestion" element={<Gestion />} />
+          <Route path="stock" element={<Stock />} />
+          <Route path="profil" element={<Profil />} />
+          <Route
+            path="inventaire"
+            element={
+              <RequireRole minimum="n2">
+                <Inventaire />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="journal"
+            element={
+              <RequireRole minimum="n2">
+                <Journal />
+              </RequireRole>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Portail />
+    </AuthProvider>
+  )
+}

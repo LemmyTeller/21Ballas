@@ -1,0 +1,310 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Rôles : lus dans users/{uid}, jamais fournis par le client ----
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Doit rester aligné sur RANGS dans src/lib/roles.ts
+    function rank(role) {
+      return {
+        'revoque': -1,
+        'pending': 0,
+        'membre': 1,
+        'officier': 2,
+        'n2': 3,
+        'n1': 4,
+        'admin': 5
+      }[role];
+    }
+
+    function myRank() {
+      return rank(myRole());
+    }
+
+    // Compte validé (ni pending, ni revoque)
+    function isValide() {
+      return hasProfile() && myRank() >= 1;
+    }
+
+    // Masque violet et au-dessus
+    function isOfficier() {
+      return hasProfile() && myRank() >= 2;
+    }
+
+    // N2, N1, admin : ceux qui gèrent les membres
+    function isGrade() {
+      return hasProfile() && myRank() >= 3;
+    }
+
+    function isAdmin() {
+      return hasProfile() && myRole() == 'admin';
+    }
+
+    function shortString(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    // Anniversaire RP : vide ou JJ/MM
+    function anniversaireValide(data) {
+      return !('anniversaireRP' in data)
+        || (data.anniversaireRP is string
+            && data.anniversaireRP.matches('^((0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2]))?$'));
+    }
+
+    function soldeValide(data) {
+      return !('compteBancaire' in data)
+        || (data.compteBancaire is number && data.compteBancaire >= 0 && data.compteBancaire <= 1000000000000);
+    }
+
+    function vehiculeValide(data) {
+      return data.keys().hasOnly(['modele', 'plaque', 'proprietaireUid', 'lieuId', 'note', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['modele', 'plaque', 'proprietaireUid', 'lieuId', 'note', 'createdAt', 'updatedAt'])
+        && shortString(data.modele, 60)
+        && data.modele.size() > 0
+        && shortString(data.plaque, 12)
+        && data.proprietaireUid is string
+        && (data.lieuId == null || data.lieuId is string)
+        && shortString(data.note, 200)
+        && data.updatedAt == request.time;
+    }
+
+    function lieuValide(data) {
+      return data.keys().hasOnly(['nom', 'capacite', 'createdAt'])
+        && data.keys().hasAll(['nom', 'capacite', 'createdAt'])
+        && shortString(data.nom, 60)
+        && data.nom.size() > 0
+        && data.capacite is int
+        && data.capacite >= 0
+        && data.capacite <= 200;
+    }
+
+    function categorieValide(data) {
+      return data.keys().hasOnly(['nom', 'createdAt'])
+        && data.keys().hasAll(['nom', 'createdAt'])
+        && shortString(data.nom, 40)
+        && data.nom.size() > 0;
+    }
+
+    function articleValide(data) {
+      return data.keys().hasOnly(['categorieId', 'quantites', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['categorieId', 'quantites', 'createdAt', 'updatedAt'])
+        && data.categorieId is string
+        && data.quantites is map
+        && data.updatedAt == request.time;
+    }
+
+    function prixValide(data) {
+      return data.keys().hasOnly(['prixAchat', 'prixVente'])
+        && data.keys().hasAll(['prixAchat', 'prixVente'])
+        && (data.prixAchat == null || (data.prixAchat is number && data.prixAchat >= 0))
+        && (data.prixVente == null || (data.prixVente is number && data.prixVente >= 0));
+    }
+
+    // ---- Membres : fiche publique, uniquement des informations RP ----
+
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isValide());
+      allow list: if isValide();
+
+      // Première connexion : chacun crée sa propre fiche, forcément en attente
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nomRP', 'telephoneRP', 'role', 'createdAt'])
+        && request.resource.data.keys().hasAll(['nomRP', 'telephoneRP', 'role', 'createdAt'])
+        && request.resource.data.role == 'pending'
+        && shortString(request.resource.data.nomRP, 60)
+        && shortString(request.resource.data.telephoneRP, 20)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if
+        // Soi-même : profil RP et présence, jamais le rôle.
+        // email / displayName / photoURL : anciennes clés, autorisées uniquement en suppression.
+        (
+          signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['nomRP', 'telephoneRP', 'anniversaireRP', 'compteBancaire', 'present', 'presenceAt',
+                'email', 'displayName', 'photoURL'])
+          && !request.resource.data.keys().hasAny(['email', 'displayName', 'photoURL'])
+          && shortString(request.resource.data.nomRP, 60)
+          && shortString(request.resource.data.telephoneRP, 20)
+          && anniversaireValide(request.resource.data)
+          && soldeValide(request.resource.data)
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['present', 'presenceAt'])
+            || (request.resource.data.present is bool && request.resource.data.presenceAt == request.time)
+          )
+        )
+        // Gradé : uniquement le rôle des autres (jamais le sien).
+        // Hors admin, la cible et le grade attribué doivent être strictement sous son propre rang.
+        || (
+          isGrade()
+          && request.auth.uid != uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['role', 'validatedBy', 'validatedAt', 'raisonRevocation'])
+          && request.resource.data.role in ['membre', 'officier', 'n2', 'n1', 'admin', 'revoque']
+          && (
+            isAdmin()
+            || (rank(resource.data.role) < myRank() && rank(request.resource.data.role) < myRank())
+          )
+          // Une révocation porte toujours sa raison ; un compte actif n'en garde aucune
+          && (
+            request.resource.data.role == 'revoque'
+              ? request.resource.data.raisonRevocation in ['cavale', 'absence', 'refus']
+              : !('raisonRevocation' in request.resource.data)
+          )
+          && request.resource.data.validatedBy == request.auth.uid
+          && request.resource.data.validatedAt == request.time
+        )
+        // Grade supérieur : correction du solde d'un joueur de rang strictement inférieur (admin : tous)
+        || (
+          isGrade()
+          && request.auth.uid != uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['compteBancaire'])
+          && (isAdmin() || rank(resource.data.role) < myRank())
+          && soldeValide(request.resource.data)
+        );
+
+      // Suppression définitive (mort, départ de l'île) : mêmes droits que la révocation
+      allow delete: if isGrade()
+        && request.auth.uid != uid
+        && (isAdmin() || rank(resource.data.role) < myRank());
+
+      // Données personnelles du compte : le joueur lui-même et l'admin uniquement
+      match /prive/{docId} {
+        allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+
+        // Effacée en même temps que la fiche, par celui qui a le droit de supprimer le joueur
+        allow delete: if isGrade()
+          && request.auth.uid != uid
+          && (isAdmin() || rank(get(/databases/$(database)/documents/users/$(uid)).data.role) < myRank());
+
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && docId == 'compte'
+          && request.resource.data.keys().hasOnly(['email'])
+          && request.resource.data.email == request.auth.token.email;
+      }
+    }
+
+    // ---- Gestion : véhicules et lieux (garages) ----
+
+    match /vehicules/{id} {
+      allow read: if isValide();
+
+      // Chacun ajoute ses propres véhicules ; seul l'admin en ajoute à quelqu'un d'autre
+      allow create: if isValide()
+        && vehiculeValide(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && (request.resource.data.proprietaireUid == request.auth.uid || isAdmin());
+
+      // Le propriétaire ne change que par l'admin
+      allow update: if isValide()
+        && vehiculeValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          isAdmin()
+          || (resource.data.proprietaireUid == request.auth.uid
+              && request.resource.data.proprietaireUid == request.auth.uid)
+        );
+
+      // N1 et N2 : uniquement pour vider le garage d'un joueur de rang inférieur qu'ils suppriment
+      allow delete: if isAdmin()
+        || (isValide() && resource.data.proprietaireUid == request.auth.uid)
+        || (isGrade()
+            && rank(get(/databases/$(database)/documents/users/$(resource.data.proprietaireUid)).data.role) < myRank());
+    }
+
+    // La capacité est contrôlée par l'appli : les règles ne savent pas compter les véhicules d'un lieu
+    match /lieux/{id} {
+      allow read: if isValide();
+      allow create: if isGrade() && lieuValide(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isGrade()
+        && lieuValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isGrade();
+    }
+
+    // ---- Stock : catégories, articles (quantités par lieu) et prix ----
+
+    match /categoriesStock/{id} {
+      allow read: if isValide();
+      allow create: if isGrade()
+        && categorieValide(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isGrade()
+        && categorieValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isGrade();
+    }
+
+    // Identifiant = id de l'item du catalogue : un seul article par item
+    match /articles/{id} {
+      allow read: if isValide();
+      allow create: if isGrade()
+        && articleValide(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isGrade()
+        && articleValide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isGrade();
+    }
+
+    // Prix à part des articles : illisibles pour un Masque, même en interrogeant la base
+    match /prixArticles/{id} {
+      allow read, delete: if isGrade();
+      allow create, update: if isGrade() && prixValide(request.resource.data);
+    }
+
+    // ---- Annonces ----
+
+    match /annonces/{id} {
+      allow read: if isValide();
+
+      allow create: if isOfficier()
+        && request.resource.data.keys().hasOnly(['titre', 'contenu', 'auteurUid', 'auteurNom', 'createdAt'])
+        && request.resource.data.keys().hasAll(['titre', 'contenu', 'auteurUid', 'auteurNom', 'createdAt'])
+        && request.resource.data.auteurUid == request.auth.uid
+        && shortString(request.resource.data.titre, 120)
+        && request.resource.data.titre.size() > 0
+        && shortString(request.resource.data.contenu, 4000)
+        && shortString(request.resource.data.auteurNom, 100)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if false;
+
+      allow delete: if isGrade()
+        || (isOfficier() && resource.data.auteurUid == request.auth.uid);
+    }
+
+    // ---- Journal d'audit : ajout seul ----
+
+    match /logs/{id} {
+      allow read: if isGrade();
+
+      allow create: if isGrade()
+        && request.resource.data.keys().hasOnly(
+             ['action', 'acteurUid', 'acteurNom', 'cibleUid', 'cibleNom', 'ancienRole', 'nouveauRole', 'raison',
+              'createdAt'])
+        && request.resource.data.acteurUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // Tout le reste est refusé par défaut.
+  }
+}
