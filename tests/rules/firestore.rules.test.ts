@@ -398,10 +398,19 @@ describe('stock', () => {
     await assertSucceeds(getDocs(collection(dbDe('noir'), 'articles')))
     await assertFails(getDocs(collection(dbDe('attente'), 'articles')))
   })
-  it('seuls les gradés modifient catégories et articles', async () => {
+  it('tout membre validé modifie les quantités et crée un article non classé (saisie journalière)', async () => {
+    const maj = (champs: Record<string, unknown>) => ({ ...champs, updatedAt: serverTimestamp() })
+    await assertSucceeds(updateDoc(doc(dbDe('noir'), 'articles', '12'), maj({ 'quantites.qg': 99 })))
+    await assertSucceeds(setDoc(doc(dbDe('noir'), 'articles', '20'), { ...article(), categorieId: '' }))
+    // … mais ne classe pas un article et n'en supprime pas
+    await assertFails(setDoc(doc(dbDe('noir'), 'articles', '21'), article()))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'articles', '12'), maj({ categorieId: 'autre' })))
+    await assertFails(deleteDoc(doc(dbDe('noir'), 'articles', '12')))
+    await assertFails(updateDoc(doc(dbDe('attente'), 'articles', '12'), maj({ 'quantites.qg': 1 })))
+  })
+  it('seuls les gradés gèrent les catégories et classent les articles', async () => {
     await assertFails(setDoc(doc(dbDe('violet'), 'categoriesStock', 'c2'), categorie()))
     await assertFails(setDoc(doc(dbDe('violet'), 'articles', '13'), article()))
-    await assertFails(updateDoc(doc(dbDe('violet'), 'articles', '12'), { 'quantites.qg': 99, updatedAt: serverTimestamp() }))
     await assertSucceeds(setDoc(doc(dbDe('n2'), 'categoriesStock', 'c2'), categorie()))
     await assertSucceeds(setDoc(doc(dbDe('n2'), 'articles', '13'), article()))
     await assertSucceeds(updateDoc(doc(dbDe('n2'), 'articles', '12'), { 'quantites.qg': 9, updatedAt: serverTimestamp() }))
@@ -485,6 +494,70 @@ describe('tarifs', () => {
     await assertFails(updateDoc(doc(dbDe('admin'), 'tarifs', 'p1_vente_12'), modif({ sens: 'achat' })))
     await assertFails(updateDoc(doc(dbDe('admin'), 'tarifs', 'p1_vente_12'), modif({ reference: '99' })))
     await assertFails(updateDoc(doc(dbDe('admin'), 'tarifs', 'p1_vente_12'), modif({ partenaireId: 'p2' })))
+  })
+})
+
+describe('saisie journalière', () => {
+  const saisie = (quantites: unknown = { '71': 10000 }) => ({ quantites, updatedAt: serverTimestamp() })
+
+  it('tout membre validé lit et alimente la saisie d’un jour', async () => {
+    await assertSucceeds(setDoc(doc(dbDe('noir'), 'saisies', '2026-10-03'), saisie()))
+    await assertSucceeds(
+      setDoc(doc(dbDe('violet'), 'saisies', '2026-10-03'), saisie({ '384': 5 }), { merge: true }),
+    )
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'saisies')))
+    await assertFails(setDoc(doc(dbDe('attente'), 'saisies', '2026-10-03'), saisie()))
+    await assertFails(getDocs(collection(dbDe('attente'), 'saisies')))
+  })
+  it('identifiant de jour et contenu contrôlés, aucune suppression', async () => {
+    await assertFails(setDoc(doc(dbDe('noir'), 'saisies', 'aujourdhui'), saisie()))
+    await assertFails(setDoc(doc(dbDe('noir'), 'saisies', '2026-10-04'), saisie('beaucoup')))
+    await setDoc(doc(dbDe('noir'), 'saisies', '2026-10-03'), saisie())
+    await assertFails(deleteDoc(doc(dbDe('admin'), 'saisies', '2026-10-03')))
+  })
+})
+
+describe('contrats', () => {
+  const contrat = (champs: Record<string, unknown> = {}) => ({
+    libelle: 'Philippe',
+    montant: 50000,
+    echeance: new Date(2026, 9, 9, 21, 0),
+    heureFixee: true,
+    paye: false,
+    note: '',
+    createdAt: serverTimestamp(),
+    ...champs,
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'contrats', 'ct1'), { ...contrat(), createdAt: new Date() })
+    })
+  })
+
+  it('tous les comptes validés consultent', async () => {
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'contrats')))
+    await assertFails(getDocs(collection(dbDe('attente'), 'contrats')))
+  })
+  it('seuls les gradés créent, marquent payé, modifient et suppriment', async () => {
+    await assertFails(setDoc(doc(dbDe('violet'), 'contrats', 'ct2'), contrat()))
+    await assertFails(updateDoc(doc(dbDe('violet'), 'contrats', 'ct1'), { paye: true }))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'contrats', 'ct2'), contrat({ libelle: 'Benny’s', heureFixee: false })))
+    await assertSucceeds(updateDoc(doc(dbDe('n1'), 'contrats', 'ct1'), { paye: true }))
+    await assertFails(deleteDoc(doc(dbDe('noir'), 'contrats', 'ct1')))
+    await assertSucceeds(deleteDoc(doc(dbDe('admin'), 'contrats', 'ct1')))
+  })
+  it('données invalides refusées', async () => {
+    await assertFails(setDoc(doc(dbDe('n2'), 'contrats', 'ct3'), contrat({ montant: -1 })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'contrats', 'ct4'), contrat({ libelle: '' })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'contrats', 'ct5'), contrat({ echeance: 'vendredi' })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'contrats', 'ct6'), contrat({ hebdo: 'oui' })))
+  })
+  it('un contrat peut être hebdomadaire, et son échéance avance une fois payée', async () => {
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'contrats', 'ct7'), contrat({ hebdo: true })))
+    await assertSucceeds(
+      updateDoc(doc(dbDe('n2'), 'contrats', 'ct7'), { paye: true, echeance: new Date(2026, 9, 16, 21, 0) }),
+    )
   })
 })
 

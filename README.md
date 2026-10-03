@@ -66,7 +66,7 @@ qui additionne tous les lieux. Les items viennent du catalogue (`src/data/items.
 | Collection | Contenu | Lecture | Écriture |
 |---|---|---|---|
 | `categoriesStock` | catégories, communes à tous les lieux | membres validés | Admin, N1, N2 |
-| `articles/{itemId}` | catégorie de l'item et quantité par lieu | membres validés | Admin, N1, N2 |
+| `articles/{itemId}` | catégorie de l'item et quantité par lieu | membres validés | quantités : membres validés ; catégorie, suppression : Admin, N1, N2 |
 
 Le Stock ne porte aucun prix : ils se gèrent dans l'onglet Tarifs. La collection `prixArticles` date d'avant ce changement ;
 elle n'accepte plus d'écriture et se vide au fil des suppressions d'articles.
@@ -89,6 +89,20 @@ Les entreprises n'ont pas de grille pour le moment : elles n'apparaissent que da
 
 L'identifiant d'une ligne est `<partenaire>_<sens>_<item>` : un item ne figure qu'une fois par partenaire et par sens.
 Supprimer un partenaire supprime sa grille.
+
+## Accueil : saisie journalière et contrats
+
+**Saisie journalière** (bas de l'accueil, à gauche) : tout membre validé ajoute le butin du jour, item par item, dans le lieu choisi
+(le premier lieu par défaut). Chaque ajout s'additionne à la ligne du jour et monte le stock du lieu dans la même écriture.
+La journée commence à 3 h du matin, heure de Paris (`src/lib/journee.ts`) : il y a un document `saisies/{AAAA-MM-JJ}` par journée,
+donc la saisie repart de zéro à 3 h sans aucune tâche planifiée, et les documents des jours passés forment l'historique.
+Pour cela, tout membre validé peut modifier les quantités d'un article du Stock et créer un article non classé ;
+la catégorie et la suppression restent aux gradés.
+
+**Contrats en cours** (bas de l'accueil, à droite) : sommes que le groupe doit payer (`contrats` : libellé, montant, échéance, payé).
+Visibles par tous, gérés par Admin, N1 et N2. Vert : payé ; orange : échéance dans moins de 24 h ; rouge : délai dépassé.
+Un contrat peut être hebdomadaire (`hebdo`) : `echeance` et `paye` portent alors sur l'échéance en cours, et une fois celle-ci payée
+et passée, celle de la semaine suivante devient due (`echeanceCourante` dans `src/features/contrats/api.ts`), sans tâche planifiée.
 
 ## Annuaire
 

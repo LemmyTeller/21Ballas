@@ -88,6 +88,7 @@ export function ErrorMessage({ children }: { children: ReactNode }) {
 export function CenteredScreen({ children }: { children: ReactNode }) {
   return (
     <main className="flex min-h-svh items-center justify-center p-4">
+      <Filigrane />
       <div className="w-full max-w-md space-y-5 rounded-2xl border border-l-4 border-zinc-800 border-l-purple-600 bg-zinc-900 p-8">
         {children}
       </div>
@@ -97,6 +98,21 @@ export function CenteredScreen({ children }: { children: ReactNode }) {
 
 export function Logo({ className = 'size-20' }: { className?: string }) {
   return <img src={logo} alt="Ballas" className={`rounded-xl ${className}`} />
+}
+
+// Logo en filigrane, fixe derrière le contenu de la page : il se voit dans les espaces libres, pas à travers
+// les encarts. `apresMenu` le centre dans la zone de contenu, à droite du menu latéral.
+export function Filigrane({ apresMenu = false }: { apresMenu?: boolean }) {
+  return (
+    <img
+      src={logoChargement}
+      alt=""
+      aria-hidden="true"
+      className={`pointer-events-none fixed inset-0 -z-10 m-auto size-[min(70svh,70vw)] object-contain opacity-20 select-none ${
+        apresMenu ? 'md:left-60' : ''
+      }`}
+    />
+  )
 }
 
 // Indicateur de chargement commun : plein écran au démarrage, compact dans une carte

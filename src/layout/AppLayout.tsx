@@ -4,7 +4,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useMembre } from '../auth/AuthContext'
 import { VERSION } from '../changelog'
 import { ChangelogModal } from '../components/ChangelogModal'
-import { Avatar, Button, Logo, RoleBadge } from '../components/ui'
+import { Avatar, Button, Filigrane, Logo, RoleBadge } from '../components/ui'
 import { auth } from '../lib/firebase'
 import { aAuMoins, nomAffiche } from '../lib/roles'
 import type { Role } from '../types'
@@ -103,6 +103,7 @@ export function AppLayout() {
       </aside>
       {changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
       <main className="min-w-0 flex-1 p-4 md:p-8">
+        <Filigrane apresMenu />
         <div className={`mx-auto space-y-6 ${LARGEURS[pathname] ?? 'max-w-5xl'}`}>
           <Outlet />
         </div>

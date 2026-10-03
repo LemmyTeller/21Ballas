@@ -8,6 +8,17 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.14.0',
+    date: '2026-10-03',
+    changements: [
+      'Accueil : Saisie journalière. Chacun ajoute le butin du jour, item par item ; le stock du lieu choisi monte aussitôt.',
+      'La saisie repart de zéro chaque jour à 3 h du matin ; les journées passées restent consultables dans l’historique.',
+      'Accueil : Contrats en cours. Sommes à payer avec leur échéance : vert une fois payé, orange la veille de l’échéance, rouge quand le délai est dépassé.',
+      'Un contrat peut être hebdomadaire (par exemple tous les vendredis à 21 h) : une fois payé, il redevient à payer pour la semaine suivante.',
+      'Tarifs : la section Petites mains liste chaque personne de l’Annuaire rattachée à l’organisation des PM, pour passer directement une vente ou un achat avec elle au tarif commun.',
+    ],
+  },
+  {
     version: '0.13.0',
     date: '2026-10-03',
     changements: [

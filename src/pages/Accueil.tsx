@@ -5,8 +5,10 @@ import { Avatar, Button, Card, Chargement, ErrorMessage, RoleBadge } from '../co
 import { supprimerAnnonce } from '../features/annonces/api'
 import { NouvelleAnnonceDialog } from '../features/annonces/NouvelleAnnonceDialog'
 import { useAnnonces } from '../features/annonces/useAnnonces'
+import { Contrats } from '../features/contrats/Contrats'
 import { basculerPresence } from '../features/members/api'
 import { useMembres } from '../features/members/useMembres'
+import { SaisieJournaliere } from '../features/saisie/SaisieJournaliere'
 import { Taches } from '../features/taches/Taches'
 import { estPresent, useMaintenant } from '../lib/presence'
 import { aAuMoins, estValide, formatDate, nomAffiche, rang } from '../lib/roles'
@@ -19,7 +21,9 @@ export function Accueil() {
   const enAttente = membres.data.filter((m) => m.role === 'pending' && m.nomRP.trim()).length
 
   return (
-    <>
+    // Occupe au moins la hauteur de l'écran (moins les marges de la page), pour que la rangée du bas
+    // reste calée en bas même quand le haut de la page est peu rempli
+    <div className="flex flex-col gap-6 md:min-h-[calc(100svh-4rem)]">
       {estGrade && enAttente > 0 && (
         <Link
           to="/membres"
@@ -34,14 +38,22 @@ export function Accueil() {
       {membres.loading ? (
         <Chargement />
       ) : (
-        // Tâches et annonces se partagent la largeur restante, encart de présence étroit calé à droite
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_19rem]">
-          <Taches membre={membre} />
-          <Annonces membre={membre} membres={membres.data} />
-          <Joueurs moi={membre} membres={membres.data} />
-        </div>
+        <>
+          {/* Tâches et annonces se partagent la largeur restante, encart de présence étroit calé à droite */}
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_19rem]">
+            <Taches membre={membre} />
+            <Annonces membre={membre} membres={membres.data} />
+            <Joueurs moi={membre} membres={membres.data} />
+          </div>
+          {/* Calés en bas de page : la saisie du butin du jour à gauche, les contrats à droite,
+              dans une colonne de la même largeur que la liste de présence */}
+          <div className="mt-auto grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
+            <SaisieJournaliere />
+            <Contrats membre={membre} />
+          </div>
+        </>
       )}
-    </>
+    </div>
   )
 }
 

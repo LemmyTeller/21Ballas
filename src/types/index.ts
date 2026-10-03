@@ -106,7 +106,32 @@ export interface Tarif {
   updatedAt: Timestamp | null
 }
 
-export type StatutCommande = 'en_attente' | 'validee' | 'annulee'
+// Butin entré dans une journée de jeu. `id` = jour au format AAAA-MM-JJ ; la journée commence à 3 h du matin.
+export interface Saisie {
+  id: string
+  // Quantité totale saisie dans la journée, par item (clé du catalogue)
+  quantites: Record<string, number>
+  updatedAt: Timestamp | null
+}
+
+// Somme que le groupe doit payer avant une échéance
+export interface Contrat {
+  id: string
+  // Quoi, ou à qui : « Philippe », « Benny's »…
+  libelle: string
+  montant: number
+  echeance: Timestamp
+  // false : seule la date compte, l'échéance tombe en fin de journée
+  heureFixee: boolean
+  // true : à payer chaque semaine, le même jour à la même heure. `echeance` et `paye` portent alors sur
+  // l'échéance en cours ; une fois celle-ci payée et passée, la suivante devient due (voir echeanceCourante).
+  hebdo?: boolean
+  paye: boolean
+  note: string
+  createdAt: Timestamp | null
+}
+
+export type StatutCommande ='en_attente' | 'validee' | 'annulee'
 
 // Item commandé : vendu (`sens: 'vente'`) ou acheté (`sens: 'achat'`) au partenaire.
 // Les prix unitaires sont ceux du tarif au moment de l'ajout.

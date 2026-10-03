@@ -32,6 +32,10 @@ type Fenetre =
   | { type: 'commande'; tarif: Tarif }
   | { type: 'contacts' }
 
+// Identifiant de partenaire d'une petite main issue de l'Annuaire : ce préfixe suivi de l'id du contact.
+// C'est lui que portent ses commandes.
+const PREFIXE_CONTACT = 'contact-'
+
 const SENS: { sens: SensTarif; titre: string }[] = [
   { sens: 'achat', titre: 'On lui achète' },
   { sens: 'vente', titre: 'On lui vend' },
@@ -64,6 +68,7 @@ export function Tarifs() {
   const lieux = useLieux()
   const [selectionId, setSelectionId] = useState<string | null>(null)
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
+  const [pmOuvert, setPmOuvert] = useState(false)
   // Menu « ⋯ » d'une ligne, ancré sous son bouton
   const [menu, setMenu] = useState<{ tarif: Tarif; droite: number; haut: number } | null>(null)
   // Pour proposer de compléter une vente ou un achat déjà en cours avec le partenaire
@@ -77,12 +82,35 @@ export function Tarifs() {
 
   // Seuls le Cartel et les groupes ont leur propre grille ; les petites mains partagent la grille commune
   const tries = partenaires.data.filter((p) => TYPES_AVEC_GRILLE.includes(p.type)).sort(comparerPartenaires)
-  const pms = partenaires.data.filter((p) => p.type === 'pm').sort(comparerPartenaires)
+  // Les petites mains sont des personnes : les contacts de l'Annuaire rattachés à une organisation de type
+  // « Petite main » (par exemple « PM - Petites Mains »), une entrée par personne. Chacune est présentée comme un
+  // partenaire pour pouvoir passer commande avec elle. Une organisation PM sans aucun contact apparaît telle quelle.
+  const organisationsPM = partenaires.data.filter((p) => p.type === 'pm')
+  const pms: Partenaire[] = [
+    ...contacts.data
+      .filter((c) => organisationsPM.some((o) => o.id === c.partenaireId))
+      .map((c) => ({
+        id: `${PREFIXE_CONTACT}${c.id}`,
+        nom: c.nom,
+        type: 'pm' as const,
+        telephone: c.telephone,
+        note: [c.role, c.informations].filter(Boolean).join(' — '),
+        couleur: organisationsPM.find((o) => o.id === c.partenaireId)?.couleur,
+        createdAt: null,
+      })),
+    ...organisationsPM.filter((o) => !contacts.data.some((c) => c.partenaireId === o.id)),
+  ].sort(comparerPartenaires)
   // Sans choix explicite (ou si le partenaire choisi vient d'être supprimé) : le premier de la liste,
   // à défaut la grille des petites mains
   const selection =
-    selectionId === ID_GRILLE_PM ? GRILLE_PM : (tries.find((p) => p.id === selectionId) ?? tries[0] ?? GRILLE_PM)
+    selectionId === ID_GRILLE_PM
+      ? GRILLE_PM
+      : ([...tries, ...pms].find((p) => p.id === selectionId) ?? tries[0] ?? GRILLE_PM)
+  // « Tarif commun » sélectionné : la grille des petites mains, sans PM précise
   const grillePM = selection.id === ID_GRILLE_PM
+  // Une petite main (ou le tarif commun) : c'est la grille commune qui s'affiche et se modifie
+  const estPM = selection.type === 'pm'
+  const grille = estPM ? GRILLE_PM : selection
 
   const reference = (tarif: Tarif): Reference | undefined => catalogue.items?.find((r) => r.cle === tarif.reference)
   const nom = (tarif: Tarif) => reference(tarif)?.name ?? `Item ${tarif.reference}`
@@ -95,6 +123,22 @@ export function Tarifs() {
   // Ce que rapporterait la vente de tout le stock à ce prix ; null si le prix n'est pas renseigné
   const valeur = (tarif: Tarif, prix: number | null) => (prix === null ? null : stock(tarif) * prix)
 
+  const classeEntree = (actif: boolean) =>
+    `flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors ${
+      actif ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+    }`
+
+  function entree(p: Partenaire) {
+    return (
+      <li key={p.id}>
+        <button type="button" className={classeEntree(selection.id === p.id)} onClick={() => setSelectionId(p.id)}>
+          <TuileCouleur partenaire={p} className="size-3" />
+          {p.nom}
+        </button>
+      </li>
+    )
+  }
+
   function liste(type: TypePartenaire, titre: string) {
     const membres = tries.filter((p) => p.type === type)
     return (
@@ -103,22 +147,7 @@ export function Tarifs() {
         {membres.length === 0 ? (
           <p className="px-2 py-1 text-sm text-zinc-600">—</p>
         ) : (
-          <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
-            {membres.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors ${
-                    selection.id === p.id ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
-                  }`}
-                  onClick={() => setSelectionId(p.id)}
-                >
-                  <TuileCouleur partenaire={p} className="size-3" />
-                  {p.nom}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">{membres.map(entree)}</ul>
         )}
       </div>
     )
@@ -147,16 +176,41 @@ export function Tarifs() {
           <Card className="space-y-4 p-4!">
             {TYPES_AVEC_GRILLE.map((type) => liste(type, TYPE_PLURIELS[type]))}
             <div>
-              <p className="mb-1 text-xs font-medium tracking-wide text-zinc-500 uppercase">{TYPE_PLURIELS.pm}</p>
+              {/* Section repliée par défaut : la liste des petites mains peut être longue */}
               <button
                 type="button"
-                className={`w-full rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors ${
-                  grillePM ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
-                }`}
-                onClick={() => setSelectionId(ID_GRILLE_PM)}
+                aria-expanded={pmOuvert}
+                className="mb-1 flex w-full items-center justify-between gap-2 rounded-md text-xs font-medium tracking-wide text-zinc-500 uppercase hover:text-zinc-300"
+                onClick={() => setPmOuvert(!pmOuvert)}
               >
-                Tarif commun
+                <span>
+                  {TYPE_PLURIELS.pm} <span className="tabular-nums">({pms.length})</span>
+                </span>
+                <svg
+                  viewBox="0 0 24 24"
+                  className={`size-4 transition-transform ${pmOuvert ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </button>
+              {/* Toutes les petites mains ont la même grille : « Tarif commun » sert à la régler,
+                  chaque personne à passer une vente ou un achat avec elle */}
+              {pmOuvert && (
+                <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+                  <li>
+                    <button type="button" className={classeEntree(grillePM)} onClick={() => setSelectionId(ID_GRILLE_PM)}>
+                      Tarif commun
+                    </button>
+                  </li>
+                  {pms.map(entree)}
+                </ul>
+              )}
             </div>
           </Card>
 
@@ -196,15 +250,17 @@ export function Tarifs() {
                     )}
                   </p>
                   {selection.note && <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-400">{selection.note}</p>}
-                  {grillePM && (
+                  {estPM && (
                     <p className="mt-1 max-w-2xl text-sm text-zinc-400">
-                      Les mêmes tarifs pour toutes les petites mains
-                      {pms.length > 0 && ` (${pms.map((p) => p.nom).join(', ')})`}. Un prix négocié avec l’une d’elles se
-                      corrige à la validation de la commande.
+                      {grillePM
+                        ? 'Les mêmes tarifs pour toutes les petites mains.'
+                        : 'Tarif commun à toutes les petites mains : le modifier ici le modifie pour toutes.'}{' '}
+                      Un prix négocié avec l’une d’elles se corrige à la validation de la commande.
                     </p>
                   )}
                 </div>
-                {estGrade && !grillePM && (
+                {/* Une personne de l'Annuaire se modifie dans l'Annuaire */}
+                {estGrade && !grillePM && !selection.id.startsWith(PREFIXE_CONTACT) && (
                   <Button variant="ghost" onClick={() => setFenetre({ type: 'partenaire', partenaire: selection })}>
                     Modifier
                   </Button>
@@ -214,7 +270,7 @@ export function Tarifs() {
               <div className="grid items-start gap-6 xl:grid-cols-2">
                 {SENS.map(({ sens, titre }) => {
                   const lignes = tarifs.data
-                    .filter((t) => t.partenaireId === selection.id && t.sens === sens)
+                    .filter((t) => t.partenaireId === grille.id && t.sens === sens)
                     // Dans l'ordre d'ajout ; une ligne tout juste créée (heure pas encore confirmée) va en dernier
                     .sort((a, b) => (a.createdAt?.toMillis() ?? Infinity) - (b.createdAt?.toMillis() ?? Infinity))
                   return (
@@ -362,12 +418,15 @@ export function Tarifs() {
         <Modal title={`Contacts — ${selection.nom}`} onClose={() => setFenetre(null)}>
           {selection.telephone && (
             <p className="text-sm text-zinc-300">
-              Téléphone de l’organisation :{' '}
+              Téléphone :{' '}
               <span className="font-semibold text-zinc-50 tabular-nums">{selection.telephone}</span>
             </p>
           )}
           {contactsDe(selection).length === 0 ? (
-            <p className="text-sm text-zinc-500">Aucun contact rattaché dans l’Annuaire.</p>
+            // Une petite main est elle-même un contact : rien d'autre à lister
+            !selection.id.startsWith(PREFIXE_CONTACT) && (
+              <p className="text-sm text-zinc-500">Aucun contact rattaché dans l’Annuaire.</p>
+            )
           ) : (
             <ul className="max-h-[60svh] divide-y divide-zinc-800 overflow-y-auto">
               {contactsDe(selection).map((c) => (
@@ -394,7 +453,7 @@ export function Tarifs() {
 
       {fenetre?.type === 'commande' && (
         <CommandeLigneModal
-          // Depuis la grille commune, il faut dire avec quelle petite main on traite
+          // Depuis « Tarif commun », il faut dire avec quelle petite main on traite ; depuis une PM, c'est elle
           partenaires={grillePM ? pms : [selection]}
           tarif={fenetre.tarif}
           reference={reference(fenetre.tarif)}
@@ -413,7 +472,8 @@ export function Tarifs() {
       )}
       {fenetre?.type === 'tarif' && catalogue.items && (
         <TarifModal
-          partenaire={selection}
+          // Pour une petite main, la ligne va dans la grille commune
+          partenaire={grille}
           sens={fenetre.sens}
           tarif={fenetre.tarif}
           catalogue={catalogue.items}
