@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMembre } from '../auth/AuthContext'
 import { Button, Card, Chargement, ErrorMessage } from '../components/ui'
+import { PhotoVehicule } from '../features/gestion/PhotoVehicule'
 import { SoldeForm } from '../features/gestion/SoldeForm'
 import { useLieux } from '../features/gestion/useLieux'
 import { useVehicules } from '../features/gestion/useVehicules'
@@ -49,7 +50,9 @@ export function Profil() {
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-zinc-500">
                 <tr>
-                  <th className="pb-2 font-medium">Modèle</th>
+                  <th className="pb-2 font-medium" colSpan={2}>
+                    Modèle
+                  </th>
                   <th className="pb-2 font-medium">Plaque</th>
                   <th className="pb-2 font-medium">Garage</th>
                   <th className="pb-2 font-medium">Note</th>
@@ -59,6 +62,9 @@ export function Profil() {
               <tbody className="divide-y divide-zinc-800">
                 {miens.map((v) => (
                   <tr key={v.id}>
+                    <td className="w-20 py-2.5 pr-3">
+                      <PhotoVehicule vehicule={v} />
+                    </td>
                     <td className="py-2.5 pr-4 font-medium text-zinc-100">{v.modele}</td>
                     <td className="py-2.5 pr-4 font-mono text-xs text-zinc-300">{v.plaque || '—'}</td>
                     <td className="py-2.5 pr-4 text-zinc-300">

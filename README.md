@@ -104,6 +104,19 @@ Visibles par tous, gérés par Admin, N1 et N2. Vert : payé ; orange : échéan
 Un contrat peut être hebdomadaire (`hebdo`) : `echeance` et `paye` portent alors sur l'échéance en cours, et une fois celle-ci payée
 et passée, celle de la semaine suivante devient due (`echeanceCourante` dans `src/features/contrats/api.ts`), sans tâche planifiée.
 
+## Photos des véhicules et Carjacking
+
+Il n'y a pas d'API officielle des véhicules de GTA V. L'appli embarque un catalogue (`src/data/vehicules.json` : nom de spawn, nom français,
+marque, catégorie), généré par `npm run vehicules` à partir de l'export communautaire `DurtyFree/gta-v-data-dumps`. Les photos viennent de
+la documentation de FiveM : `https://docs.fivem.net/vehicles/<spawn>.webp`. Une image absente affiche un cadre vide.
+
+- **Véhicules du groupe** : le modèle se choisit dans le catalogue (champ `spawn` du document `vehicules`), la saisie libre restant possible.
+  Sans `spawn`, l'appli rapproche le texte saisi d'un modèle pour l'affichage seulement (`trouverModele`, `src/features/gestion/modeles.ts`) ;
+  un texte ambigu (« Hellfire » : Gauntlet ou Hotring) ne donne pas de photo tant qu'on n'a pas choisi le modèle.
+- **Carjacking** (`carjackings`) : voitures à aller voler. Un gradé ajoute la fiche ; tout membre validé la marque volée puis déposée, en son nom ;
+  un gradé la clôt en indiquant si elle est rachetée et pour quel montant en sale, ajouté au stock de billets de 1$ du lieu choisi.
+  Une fiche close ne change plus et forme l'historique.
+
 ## Blanchiment
 
 Onglet **Blanchiment**, visible par tous les membres validés ; Admin, N1 et N2 recensent les commerces et gèrent les dépôts.
@@ -166,6 +179,8 @@ Chaque joueur se déclare présent depuis l'accueil. Sans nouveau clic, la prés
 | `npm run dev` | serveur de développement |
 | `npm run build` | vérification TypeScript + build dans `dist/` |
 | `npm run lint` | oxlint |
+| `npm run items` | régénère les catalogues d'items et d'armes à partir des exports du serveur (non versionnés) |
+| `npm run vehicules` | régénère le catalogue des véhicules depuis l'export communautaire (accès Internet requis) |
 | `npm run emulators` | émulateurs Auth + Firestore (JDK 21 requis), avec `VITE_USE_EMULATORS=true` |
 | `npm run test:rules` | tests des règles Firestore sur l'émulateur (JDK 21 requis) |
 | `npm run deploy` | build + déploiement Hosting et règles Firestore |

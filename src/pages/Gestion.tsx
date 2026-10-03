@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { useMembre } from '../auth/AuthContext'
+import { ImageVehicule } from '../components/ImageVehicule'
 import { Button, Card, Chargement, ErrorMessage } from '../components/ui'
 import { LieuModal } from '../features/gestion/LieuModal'
 import { classeSolde, couleursMembres, formatMontant, occupation } from '../features/gestion/outils'
+import { PhotoVehicule } from '../features/gestion/PhotoVehicule'
 import { SoldeModal } from '../features/gestion/SoldeForm'
 import { useLieux } from '../features/gestion/useLieux'
+import { useModeleDe } from '../features/gestion/useModeleDe'
 import { useVehicules } from '../features/gestion/useVehicules'
 import { VehiculeModal } from '../features/gestion/VehiculeModal'
 import { useMembres } from '../features/members/useMembres'
@@ -115,15 +118,23 @@ export function Gestion() {
   )
 }
 
+// Nom d'un véhicule, à la couleur de son propriétaire. `avecApercu` : la photo s'affiche au survol
+// (vue Membres, où il n'y a pas de vignette pour garder le tableau compact).
 function EtiquetteVehicule({
   vehicule,
   couleur,
+  avecApercu = false,
   onClick,
 }: {
   vehicule: Vehicule
   couleur: string | undefined
+  avecApercu?: boolean
   onClick?: (vehicule: Vehicule) => void
 }) {
+  const modele = useModeleDe(vehicule)
+  // Position de la vignette affichée au survol, sous l'étiquette ; null quand la souris n'est pas dessus
+  const [apercu, setApercu] = useState<{ gauche: number; haut: number } | null>(null)
+
   const libelle = (
     <>
       {vehicule.modele}
@@ -131,12 +142,35 @@ function EtiquetteVehicule({
     </>
   )
   const classe = `font-medium ${couleur ?? 'text-zinc-300'}`
-  return onClick ? (
-    <button type="button" className={`${classe} hover:underline`} onClick={() => onClick(vehicule)}>
-      {libelle}
-    </button>
-  ) : (
-    <span className={classe}>{libelle}</span>
+  const survol = {
+    onMouseEnter: (e: MouseEvent<HTMLElement>) => {
+      if (!avecApercu || !modele) return
+      const cadre = e.currentTarget.getBoundingClientRect()
+      setApercu({ gauche: cadre.left, haut: cadre.bottom + 6 })
+    },
+    onMouseLeave: () => setApercu(null),
+  }
+
+  return (
+    <>
+      {onClick ? (
+        <button type="button" className={`${classe} hover:underline`} onClick={() => onClick(vehicule)} {...survol}>
+          {libelle}
+        </button>
+      ) : (
+        <span className={classe} {...survol}>
+          {libelle}
+        </span>
+      )}
+      {apercu && modele && (
+        <span
+          className="pointer-events-none fixed z-30 block rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-xl"
+          style={{ left: apercu.gauche, top: apercu.haut }}
+        >
+          <ImageVehicule spawn={modele.spawn} className="h-24 w-40" />
+        </span>
+      )}
+    </>
   )
 }
 
@@ -204,7 +238,13 @@ function VueMembres({
                     ) : (
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
                         {siens.map((v) => (
-                          <EtiquetteVehicule key={v.id} vehicule={v} couleur={couleurs.get(m.uid)} onClick={onVehicule} />
+                          <EtiquetteVehicule
+                            key={v.id}
+                            vehicule={v}
+                            couleur={couleurs.get(m.uid)}
+                            avecApercu
+                            onClick={onVehicule}
+                          />
                         ))}
                       </div>
                     )}
@@ -259,7 +299,8 @@ function VueGarages({
         {[...gares]
           .sort((a, b) => a.modele.localeCompare(b.modele, 'fr'))
           .map((v) => (
-            <li key={v.id} className="flex items-baseline gap-3 py-1.5">
+            <li key={v.id} className="flex items-center gap-3 py-1.5">
+              <PhotoVehicule vehicule={v} className="h-9 w-14" />
               <span className="min-w-0 flex-1 truncate">
                 <EtiquetteVehicule vehicule={v} couleur={couleurs.get(v.proprietaireUid)} onClick={onVehicule} />
               </span>

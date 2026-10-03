@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Modal } from '../../components/Modal'
 import { Button, Card, Chargement, ErrorMessage, inputClass } from '../../components/ui'
 import { aAuMoins } from '../../lib/roles'
 import type { Membre, Tache } from '../../types'
+import { useCarjackings } from '../carjacking/useCarjackings'
 import { cocherTache, creerTache, echangerTaches, supprimerTache } from './api'
 import { useTaches } from './useTaches'
 
@@ -10,6 +12,8 @@ import { useTaches } from './useTaches'
 // les gradés (Admin, N1, N2) ajoutent, réordonnent et suppriment.
 export function Taches({ membre }: { membre: Membre }) {
   const taches = useTaches()
+  // Nombre de voitures en attente d'être volées, pour la tâche automatique
+  const aVoler = useCarjackings().data.filter((c) => c.statut === 'a_voler').length
   const [saisie, setSaisie] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const estGrade = aAuMoins(membre.role, 'n2')
@@ -76,10 +80,29 @@ export function Taches({ membre }: { membre: Membre }) {
       <ErrorMessage>{taches.error ?? erreur}</ErrorMessage>
       {taches.loading ? (
         <Chargement />
-      ) : taches.data.length === 0 ? (
+      ) : taches.data.length === 0 && aVoler === 0 ? (
         <p className="text-sm text-zinc-500">Aucune tâche pour le moment.</p>
       ) : (
         <ul className="divide-y divide-zinc-800">
+          {/* Tâche automatique, toujours en tête : présente tant qu'au moins une voiture est à voler dans
+              Carjacking, elle disparaît toute seule ensuite. Elle ne se coche pas et ne se supprime pas. */}
+          {aVoler > 0 && (
+            <li className="flex items-start gap-3 py-2">
+              <span
+                aria-hidden="true"
+                className="flex size-7 shrink-0 items-center justify-center rounded-md border-2 border-amber-500 text-sm font-bold text-amber-400"
+              >
+                !
+              </span>
+              <Link to="/carjacking" className="min-w-0 flex-1 pt-0.5 text-sm text-zinc-100 hover:underline">
+                Vol de véhicule demandé
+                <span className="text-zinc-400">
+                  {' '}
+                  · {aVoler} voiture{aVoler > 1 ? 's' : ''} à voler
+                </span>
+              </Link>
+            </li>
+          )}
           {aFaire.map(ligne)}
           {faites.map(ligne)}
         </ul>

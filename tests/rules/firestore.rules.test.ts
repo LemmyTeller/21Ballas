@@ -330,6 +330,10 @@ describe('gestion : véhicules', () => {
     await assertSucceeds(setDoc(doc(dbDe('noir'), 'vehicules', 'x1'), vehicule('noir')))
     await assertFails(setDoc(doc(dbDe('attente'), 'vehicules', 'x2'), vehicule('attente')))
     await assertFails(setDoc(doc(dbDe('noir'), 'vehicules', 'x3'), { ...vehicule('noir'), modele: '' }))
+    // Lien facultatif au catalogue des véhicules, pour la photo
+    await assertSucceeds(setDoc(doc(dbDe('noir'), 'vehicules', 'x4'), { ...vehicule('noir'), spawn: 'sultan' }))
+    await assertSucceeds(setDoc(doc(dbDe('noir'), 'vehicules', 'x5'), { ...vehicule('noir'), spawn: null }))
+    await assertFails(setDoc(doc(dbDe('noir'), 'vehicules', 'x6'), { ...vehicule('noir'), spawn: 42 }))
   })
   it('seul l’admin ajoute un véhicule à quelqu’un d’autre', async () => {
     await assertFails(setDoc(doc(dbDe('noir'), 'vehicules', 'x1'), vehicule('violet')))
@@ -514,6 +518,71 @@ describe('saisie journalière', () => {
     await assertFails(setDoc(doc(dbDe('noir'), 'saisies', '2026-10-04'), saisie('beaucoup')))
     await setDoc(doc(dbDe('noir'), 'saisies', '2026-10-03'), saisie())
     await assertFails(deleteDoc(doc(dbDe('admin'), 'saisies', '2026-10-03')))
+  })
+})
+
+describe('carjacking', () => {
+  const fiche = (uid: string, champs: Record<string, unknown> = {}) => ({
+    spawn: 'kuruma',
+    modele: 'Kuruma',
+    note: '',
+    statut: 'a_voler',
+    creeParUid: uid,
+    createdAt: serverTimestamp(),
+    ...champs,
+  })
+  const vol = (uid: string) => ({ statut: 'vole', voleParUid: uid, voleAt: serverTimestamp() })
+  const depot = (uid: string) => ({ statut: 'depose', deposeParUid: uid, deposeAt: serverTimestamp() })
+  const rachat = (uid: string) => ({
+    statut: 'clos',
+    rachete: true,
+    montant: 5000,
+    lieuId: 'qg',
+    closParUid: uid,
+    closAt: serverTimestamp(),
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      const base = { spawn: 'kuruma', modele: 'Kuruma', note: '', creeParUid: 'n1', createdAt: new Date() }
+      await setDoc(doc(db, 'carjackings', 'cj1'), { ...base, statut: 'a_voler' })
+      await setDoc(doc(db, 'carjackings', 'volee'), { ...base, statut: 'vole', voleParUid: 'noir', voleAt: new Date() })
+      await setDoc(doc(db, 'carjackings', 'deposee'), { ...base, statut: 'depose' })
+      await setDoc(doc(db, 'carjackings', 'close'), { ...base, statut: 'clos' })
+    })
+  })
+
+  it('tous consultent, seuls les gradés ajoutent une voiture', async () => {
+    await assertSucceeds(getDocs(collection(dbDe('noir'), 'carjackings')))
+    await assertFails(getDocs(collection(dbDe('attente'), 'carjackings')))
+    await assertFails(setDoc(doc(dbDe('violet'), 'carjackings', 'x1'), fiche('violet')))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'carjackings', 'x2'), fiche('n2', { spawn: null, modele: 'Voiture du serveur' })))
+    await assertFails(setDoc(doc(dbDe('n2'), 'carjackings', 'x3'), fiche('n2', { statut: 'vole' })))
+    // Avec ou sans groupe demandeur
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'carjackings', 'x4'), fiche('n2', { partenaireId: 'p1' })))
+    await assertSucceeds(setDoc(doc(dbDe('n2'), 'carjackings', 'x5'), fiche('n2', { partenaireId: null })))
+  })
+  it('tout membre validé vole puis dépose, en son nom et dans l’ordre', async () => {
+    await assertFails(updateDoc(doc(dbDe('noir'), 'carjackings', 'cj1'), vol('violet')))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'carjackings', 'cj1'), depot('noir')))
+    await assertSucceeds(updateDoc(doc(dbDe('noir'), 'carjackings', 'cj1'), vol('noir')))
+    await assertSucceeds(updateDoc(doc(dbDe('violet'), 'carjackings', 'volee'), depot('violet')))
+    await assertFails(updateDoc(doc(dbDe('attente'), 'carjackings', 'cj1'), vol('attente')))
+  })
+  it('seul un gradé renseigne le rachat, et une fiche close ne change plus', async () => {
+    await assertFails(updateDoc(doc(dbDe('violet'), 'carjackings', 'deposee'), rachat('violet')))
+    await assertFails(updateDoc(doc(dbDe('n2'), 'carjackings', 'cj1'), rachat('n2')))
+    await assertSucceeds(updateDoc(doc(dbDe('n2'), 'carjackings', 'deposee'), rachat('n2')))
+    await assertFails(updateDoc(doc(dbDe('admin'), 'carjackings', 'close'), rachat('admin')))
+    await assertFails(deleteDoc(doc(dbDe('admin'), 'carjackings', 'close')))
+  })
+  it('un gradé revient à l’étape précédente ou supprime une fiche en cours', async () => {
+    const retour = { statut: 'a_voler', voleParUid: deleteField(), voleAt: deleteField() }
+    await assertFails(updateDoc(doc(dbDe('noir'), 'carjackings', 'volee'), retour))
+    await assertSucceeds(updateDoc(doc(dbDe('n2'), 'carjackings', 'volee'), retour))
+    await assertFails(deleteDoc(doc(dbDe('violet'), 'carjackings', 'cj1')))
+    await assertSucceeds(deleteDoc(doc(dbDe('n1'), 'carjackings', 'cj1')))
   })
 })
 

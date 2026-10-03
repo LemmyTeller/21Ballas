@@ -33,9 +33,44 @@ export interface Lieu {
   createdAt: Timestamp | null
 }
 
+// Modèle du catalogue des véhicules de GTA V (src/data/vehicules.json, généré par `npm run vehicules`)
+export interface ModeleVehicule {
+  // Nom de spawn : c'est lui qui donne l'adresse de la photo
+  spawn: string
+  nom: string
+  marque: string
+  classe: string
+}
+
+// Voiture à aller voler. Elle avance d'étape en étape, puis finit dans l'historique une fois le rachat renseigné.
+export interface Carjacking {
+  id: string
+  // Nom de spawn du modèle ; null pour un modèle saisi librement, hors catalogue
+  spawn: string | null
+  modele: string
+  note: string
+  // Groupe pour lequel la voiture est volée ; null ou absent : pour personne en particulier
+  partenaireId?: string | null
+  statut: 'a_voler' | 'vole' | 'depose' | 'clos'
+  creeParUid: string
+  createdAt: Timestamp | null
+  voleParUid?: string
+  voleAt?: Timestamp | null
+  deposeParUid?: string
+  deposeAt?: Timestamp | null
+  // Renseignés à la clôture : rachetée ou non, montant en sale, lieu où sont entrés les billets de 1$
+  rachete?: boolean
+  montant?: number | null
+  lieuId?: string | null
+  closParUid?: string
+  closAt?: Timestamp | null
+}
+
 export interface Vehicule {
   id: string
   modele: string
+  // Lien au catalogue des véhicules, pour la photo ; absent ou null pour un modèle saisi librement
+  spawn?: string | null
   plaque: string
   proprietaireUid: string
   // null : véhicule sans garage

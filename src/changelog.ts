@@ -8,6 +8,18 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.16.0',
+    date: '2026-10-03',
+    changements: [
+      'Photos des véhicules : le modèle se choisit dans un catalogue avec recherche, et sa photo s’affiche dans Gestion et dans les Paramètres.',
+      'Les véhicules déjà saisis retrouvent leur photo tout seuls quand leur nom correspond à un modèle du catalogue.',
+      'Nouvel onglet Carjacking : les voitures à aller voler, avec leur photo. Tout membre clique « Voler » puis « Déposer ».',
+      'Une fois la voiture déposée, un gradé indique si elle est rachetée et pour quel montant en sale, ajouté au stock.',
+      'Une voiture à voler peut être demandée par un groupe, affiché sur sa fiche.',
+      'Accueil : la tâche « Vol de véhicule demandé » apparaît toute seule tant qu’une voiture est à voler.',
+    ],
+  },
+  {
     version: '0.15.0',
     date: '2026-10-03',
     changements: [

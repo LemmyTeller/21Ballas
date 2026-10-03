@@ -70,10 +70,13 @@ service cloud.firestore {
     }
 
     function vehiculeValide(data) {
-      return data.keys().hasOnly(['modele', 'plaque', 'proprietaireUid', 'lieuId', 'note', 'createdAt', 'updatedAt'])
+      return data.keys().hasOnly(
+               ['modele', 'spawn', 'plaque', 'proprietaireUid', 'lieuId', 'note', 'createdAt', 'updatedAt'])
         && data.keys().hasAll(['modele', 'plaque', 'proprietaireUid', 'lieuId', 'note', 'createdAt', 'updatedAt'])
         && shortString(data.modele, 60)
         && data.modele.size() > 0
+        // Lien au catalogue des véhicules (photo) : facultatif, absent sur les véhicules saisis avant
+        && (!('spawn' in data) || data.spawn == null || shortString(data.spawn, 40))
         && shortString(data.plaque, 12)
         && data.proprietaireUid is string
         && (data.lieuId == null || data.lieuId is string)
@@ -432,6 +435,81 @@ service cloud.firestore {
         && request.resource.data.recupereAt == request.time;
 
       allow delete: if isGrade() && resource.data.statut == 'en_cours';
+    }
+
+    // ---- Carjacking : voitures à aller voler ----
+    // Un gradé ajoute la voiture ; tout membre validé la marque volée puis déposée, en son nom ;
+    // un gradé clôt la fiche en renseignant le rachat. Une fiche close ne change plus (historique).
+
+    match /carjackings/{id} {
+      allow read: if isValide();
+
+      allow create: if isGrade()
+        && request.resource.data.keys().hasOnly(
+             ['spawn', 'modele', 'note', 'partenaireId', 'statut', 'creeParUid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['spawn', 'modele', 'note', 'statut', 'creeParUid', 'createdAt'])
+        // Groupe pour lequel la voiture est volée ; absent ou null : pour personne en particulier
+        && (!('partenaireId' in request.resource.data)
+            || request.resource.data.partenaireId == null
+            || request.resource.data.partenaireId is string)
+        && (request.resource.data.spawn == null || shortString(request.resource.data.spawn, 40))
+        && shortString(request.resource.data.modele, 60)
+        && request.resource.data.modele.size() > 0
+        && shortString(request.resource.data.note, 200)
+        && request.resource.data.statut == 'a_voler'
+        && request.resource.data.creeParUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if
+        // Volée, par tout membre validé
+        (
+          isValide()
+          && resource.data.statut == 'a_voler'
+          && request.resource.data.statut == 'vole'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'voleParUid', 'voleAt'])
+          && request.resource.data.voleParUid == request.auth.uid
+          && request.resource.data.voleAt == request.time
+        )
+        // Déposée, par tout membre validé
+        || (
+          isValide()
+          && resource.data.statut == 'vole'
+          && request.resource.data.statut == 'depose'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'deposeParUid', 'deposeAt'])
+          && request.resource.data.deposeParUid == request.auth.uid
+          && request.resource.data.deposeAt == request.time
+        )
+        // Rachat renseigné, par un gradé : la fiche est close
+        || (
+          isGrade()
+          && resource.data.statut == 'depose'
+          && request.resource.data.statut == 'clos'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['statut', 'rachete', 'montant', 'lieuId', 'closParUid', 'closAt'])
+          && request.resource.data.rachete is bool
+          && prixOuNul(request.resource.data.montant)
+          && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
+          && request.resource.data.closParUid == request.auth.uid
+          && request.resource.data.closAt == request.time
+        )
+        // Retour à l'étape précédente, par un gradé, pour corriger une erreur
+        || (
+          isGrade()
+          && (
+            (
+              resource.data.statut == 'vole'
+              && request.resource.data.statut == 'a_voler'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'voleParUid', 'voleAt'])
+            )
+            || (
+              resource.data.statut == 'depose'
+              && request.resource.data.statut == 'vole'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'deposeParUid', 'deposeAt'])
+            )
+          )
+        );
+
+      allow delete: if isGrade() && resource.data.statut != 'clos';
     }
 
     // ---- Contrats : sommes que le groupe doit payer, avec une échéance ----

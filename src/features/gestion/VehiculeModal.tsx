@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
+import { SelecteurModele } from '../../components/SelecteurModele'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import { nomAffiche } from '../../lib/roles'
+import { useModelesVehicules } from '../../lib/useCatalogue'
 import type { Lieu, Membre, Vehicule } from '../../types'
 import { creerVehicule, majVehicule, supprimerVehicule } from './api'
 import { lieuComplet, occupation } from './outils'
@@ -22,7 +24,9 @@ export function VehiculeModal({
   vehicules: Vehicule[]
   onClose: () => void
 }) {
+  const catalogue = useModelesVehicules()
   const [modele, setModele] = useState(vehicule?.modele ?? '')
+  const [spawn, setSpawn] = useState(vehicule?.spawn ?? null)
   const [plaque, setPlaque] = useState(vehicule?.plaque ?? '')
   const [proprietaire, setProprietaire] = useState(vehicule?.proprietaireUid ?? proprietaireUid)
   const [lieuId, setLieuId] = useState(vehicule?.lieuId ?? '')
@@ -49,7 +53,7 @@ export function VehiculeModal({
       setErreur(`Le garage « ${lieu.nom} » est plein.`)
       return
     }
-    const saisie = { modele, plaque, proprietaireUid: proprietaire, lieuId: lieuId || null, note }
+    const saisie = { modele, spawn, plaque, proprietaireUid: proprietaire, lieuId: lieuId || null, note }
     executer(() => (vehicule ? majVehicule(vehicule.id, saisie) : creerVehicule(saisie)))
   }
 
@@ -74,17 +78,18 @@ export function VehiculeModal({
             </select>
           </label>
         )}
-        <label className="block space-y-1 text-sm">
+        <div className="space-y-1 text-sm">
           <span className="text-zinc-400">Modèle</span>
-          <input
-            className={inputClass}
-            value={modele}
-            maxLength={60}
-            required
-            autoFocus
-            onChange={(e) => setModele(e.target.value)}
+          <SelecteurModele
+            catalogue={catalogue.items ?? []}
+            modele={modele}
+            spawn={spawn}
+            onChange={(valeur) => {
+              setModele(valeur.modele)
+              setSpawn(valeur.spawn)
+            }}
           />
-        </label>
+        </div>
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">Plaque</span>
           <input

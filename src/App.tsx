@@ -9,6 +9,7 @@ import { auth } from './lib/firebase'
 import { Accueil } from './pages/Accueil'
 import { Annuaire } from './pages/Annuaire'
 import { Blanchiment } from './pages/Blanchiment'
+import { Carjacking } from './pages/Carjacking'
 import { Commerce } from './pages/Commerce'
 import { Gestion } from './pages/Gestion'
 import { Inventaire } from './pages/Inventaire'
@@ -51,6 +52,7 @@ function Portail() {
           <Route path="commerce" element={<Commerce />} />
           <Route path="annuaire" element={<Annuaire />} />
           <Route path="blanchiment" element={<Blanchiment />} />
+          <Route path="carjacking" element={<Carjacking />} />
           <Route path="profil" element={<Profil />} />
           <Route
             path="inventaire"

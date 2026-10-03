@@ -1,7 +1,7 @@
 {
   "name": "21ballas",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "items": "node scripts/generer-items.mjs",
+    "vehicules": "node scripts/generer-vehicules.mjs",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-ballas",
     "test:rules": "firebase emulators:exec --only firestore --project demo-ballas \"vitest run tests/rules\"",
     "deploy": "npm run build && firebase deploy --only hosting,firestore"

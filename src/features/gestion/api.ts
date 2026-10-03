@@ -2,7 +2,10 @@ import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from '
 import { db } from '../../lib/firebase'
 import type { Lieu, Vehicule } from '../../types'
 
-export type VehiculeSaisie = Pick<Vehicule, 'modele' | 'plaque' | 'proprietaireUid' | 'lieuId' | 'note'>
+export type VehiculeSaisie = Pick<Vehicule, 'modele' | 'plaque' | 'proprietaireUid' | 'lieuId' | 'note'> & {
+  // Nom de spawn du modèle choisi dans le catalogue ; null pour une saisie libre
+  spawn: string | null
+}
 export type LieuSaisie = Pick<Lieu, 'nom' | 'capacite'>
 
 function nettoyer(saisie: VehiculeSaisie): VehiculeSaisie {

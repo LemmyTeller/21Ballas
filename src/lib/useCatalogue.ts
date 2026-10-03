@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import type { Arme, Item, Reference } from '../types'
+import type { Arme, Item, ModeleVehicule, Reference } from '../types'
 
 // Catalogues chargés à la demande, une seule fois chacun : ils n'alourdissent pas le reste de l'appli
 let items: Promise<Item[]> | null = null
 let armes: Promise<Arme[]> | null = null
 let references: Promise<Reference[]> | null = null
+let modeles: Promise<ModeleVehicule[]> | null = null
 
 const chargerItems = () => (items ??= import('../data/items.json').then((module) => module.default))
 const chargerArmes = () => (armes ??= import('../data/armes.json').then((module) => module.default))
@@ -32,6 +33,13 @@ export function useCatalogue() {
 
 export function useArmes() {
   return useChargement(chargerArmes)
+}
+
+const chargerModeles = () => (modeles ??= import('../data/vehicules.json').then((module) => module.default))
+
+// Catalogue des véhicules de GTA V, pour les photos
+export function useModelesVehicules() {
+  return useChargement(chargerModeles)
 }
 
 // Items et armes réunis, pour le Stock
