@@ -7,7 +7,6 @@ export async function creerAmende(
   saisie: {
     membre: Membre
     delit: string
-    montant: number | null
     // null : maintenant, à l'heure du serveur
     date: Date | null
     note: string
@@ -18,7 +17,6 @@ export async function creerAmende(
     membreUid: saisie.membre.uid,
     membreNom: nomAffiche(saisie.membre),
     delit: saisie.delit,
-    montant: saisie.montant,
     date: saisie.date ? Timestamp.fromDate(saisie.date) : serverTimestamp(),
     note: saisie.note.trim(),
     creeParUid: auteurUid,
@@ -26,9 +24,9 @@ export async function creerAmende(
   })
 }
 
-// Seuls le montant et la note se corrigent : le joueur, le délit et la date fixent la récidive
-export async function majAmende(id: string, saisie: { montant: number | null; note: string }): Promise<void> {
-  await updateDoc(doc(db, 'amendes', id), { montant: saisie.montant, note: saisie.note.trim() })
+// Seule la note se corrige : le joueur, le délit et la date fixent la récidive
+export async function majAmende(id: string, note: string): Promise<void> {
+  await updateDoc(doc(db, 'amendes', id), { note: note.trim() })
 }
 
 export async function supprimerAmende(id: string): Promise<void> {

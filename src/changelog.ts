@@ -8,6 +8,13 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.18.1',
+    date: '2026-10-04',
+    changements: [
+      'Amendes : plus de montant à saisir. L’onglet ne suit que les récidives ; les totaux comptent les amendes.',
+    ],
+  },
+  {
     version: '0.18.0',
     date: '2026-10-04',
     changements: [

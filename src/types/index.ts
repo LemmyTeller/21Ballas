@@ -78,8 +78,6 @@ export interface Amende {
   membreNom: string
   // Identifiant de la liste fixe des délits
   delit: string
-  // null : montant pas encore renseigné
-  montant: number | null
   // Moment où l'amende a été prise : c'est de là que partent les 24 h
   date: Timestamp
   note: string

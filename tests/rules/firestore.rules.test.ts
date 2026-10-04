@@ -738,7 +738,6 @@ describe('amendes', () => {
     membreUid: 'noir',
     membreNom: 'Noir',
     delit: 'effraction',
-    montant: 1500,
     date: serverTimestamp(),
     note: '',
     creeParUid: par,
@@ -759,7 +758,7 @@ describe('amendes', () => {
 
   it('tout membre validé note une amende, pour lui ou pour un autre', async () => {
     await assertSucceeds(setDoc(doc(dbDe('noir'), 'amendes', 'a'), amende('noir')))
-    await assertSucceeds(setDoc(doc(dbDe('violet'), 'amendes', 'b'), amende('violet', { montant: null })))
+    await assertSucceeds(setDoc(doc(dbDe('violet'), 'amendes', 'b'), amende('violet', { note: 'En fuite' })))
     await assertSucceeds(
       setDoc(doc(dbDe('violet'), 'amendes', 'c'), amende('violet', { date: new Date(Date.now() - 3_600_000) })),
     )
@@ -767,20 +766,21 @@ describe('amendes', () => {
     await assertSucceeds(getDocs(collection(dbDe('noir'), 'amendes')))
     await assertFails(getDocs(collection(dbDe('attente'), 'amendes')))
   })
-  it('amende signée, délit connu, montant positif, jamais dans le futur', async () => {
+  it('amende signée, délit connu, sans montant, jamais dans le futur', async () => {
     const creer = (modif: Record<string, unknown>) =>
       setDoc(doc(dbDe('violet'), 'amendes', 'x'), amende('violet', modif))
     await assertFails(creer({ creeParUid: 'n1' }))
     await assertFails(creer({ delit: 'inconnu' }))
-    await assertFails(creer({ montant: -1 }))
+    await assertFails(creer({ montant: 1500 }))
     await assertFails(creer({ date: new Date(Date.now() + 3_600_000) }))
     await assertFails(creer({ recidive: true }))
   })
-  it('montant et note corrigés par l’auteur, le joueur concerné ou un gradé, et rien d’autre', async () => {
+  it('note corrigée par l’auteur, le joueur concerné ou un gradé, et rien d’autre', async () => {
     for (const uid of ['violet', 'noir', 'n2', 'cache']) {
-      await assertSucceeds(updateDoc(doc(dbDe(uid), 'amendes', 'am1'), { montant: 2000, note: 'ok' }))
+      await assertSucceeds(updateDoc(doc(dbDe(uid), 'amendes', 'am1'), { note: `ok ${uid}` }))
     }
-    await assertFails(updateDoc(doc(dbDe('ancien'), 'amendes', 'am1'), { montant: 1 }))
+    await assertFails(updateDoc(doc(dbDe('ancien'), 'amendes', 'am1'), { note: 'non' }))
+    await assertFails(updateDoc(doc(dbDe('violet'), 'amendes', 'am1'), { montant: 1 }))
     await assertFails(updateDoc(doc(dbDe('violet'), 'amendes', 'am1'), { delit: 'dab' }))
     await assertFails(updateDoc(doc(dbDe('n1'), 'amendes', 'am1'), { membreUid: 'violet' }))
   })

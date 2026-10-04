@@ -12,7 +12,7 @@ const versDate = (d: Date) => `${d.getFullYear()}-${deuxChiffres(d.getMonth() + 
 const versHeure = (d: Date) => `${deuxChiffres(d.getHours())}:${deuxChiffres(d.getMinutes())}`
 
 // Nouvelle amende (joueur et délit éventuellement déjà choisis), ou correction d'une amende existante :
-// dans ce cas seuls le montant et la note se modifient.
+// dans ce cas seule la note se modifie.
 export function AmendeModal({
   amende,
   initial,
@@ -33,7 +33,6 @@ export function AmendeModal({
 }) {
   const [membreUid, setMembreUid] = useState(initial?.membreUid ?? moi.uid)
   const [delit, setDelit] = useState(initial?.delit ?? DELITS[0].id)
-  const [montant, setMontant] = useState(amende?.montant != null ? String(amende.montant) : '')
   const [date, setDate] = useState(() => versDate(new Date()))
   const [heure, setHeure] = useState(() => versHeure(new Date()))
   // Tant que la date n'est pas touchée, l'amende est datée par le serveur
@@ -58,9 +57,8 @@ export function AmendeModal({
 
   function enregistrer(e: FormEvent) {
     e.preventDefault()
-    const valeur = montant === '' ? null : Number(montant)
     if (amende) {
-      executer(() => majAmende(amende.id, { montant: valeur, note }))
+      executer(() => majAmende(amende.id, note))
       return
     }
     const membre = membres.find((m) => m.uid === membreUid)
@@ -70,7 +68,7 @@ export function AmendeModal({
       setErreur('Une amende ne peut pas être datée dans le futur.')
       return
     }
-    executer(() => creerAmende({ membre, delit, montant: valeur, date: quand, note }, moi.uid))
+    executer(() => creerAmende({ membre, delit, date: quand, note }, moi.uid))
   }
 
   return (
@@ -118,18 +116,6 @@ export function AmendeModal({
             )}
           </>
         )}
-        <label className="block space-y-1 text-sm">
-          <span className="text-zinc-400">Montant de l’amende ($, facultatif)</span>
-          <input
-            type="number"
-            className={inputClass}
-            value={montant}
-            min={0}
-            step="any"
-            autoFocus
-            onChange={(e) => setMontant(e.target.value)}
-          />
-        </label>
         {!amende && (
           <div className="grid grid-cols-2 gap-3">
             <label className="block space-y-1 text-sm">

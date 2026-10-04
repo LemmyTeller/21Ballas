@@ -103,18 +103,16 @@ service cloud.firestore {
     }
 
     // Les délits doivent rester alignés sur DELITS dans src/lib/delits.ts
+    // `montant` : champ des premières amendes (v0.18.0), plus saisi ; toléré sur les fiches qui le portent encore.
     function amendeValide(data) {
       return data.keys().hasOnly(
                ['membreUid', 'membreNom', 'delit', 'montant', 'date', 'note', 'creeParUid', 'createdAt'])
-        && data.keys().hasAll(
-               ['membreUid', 'membreNom', 'delit', 'montant', 'date', 'note', 'creeParUid', 'createdAt'])
+        && data.keys().hasAll(['membreUid', 'membreNom', 'delit', 'date', 'note', 'creeParUid', 'createdAt'])
         && data.membreUid is string
         && shortString(data.membreNom, 60)
         && data.delit in ['dab', 'vol_voiture', 'superette', 'pharmacie', 'tatoueur', 'coiffeur', 'vetements',
                           'fuite', 'drogue', 'effraction', 'agression', 'ud_g6', 'enlevement', 'otages',
                           'banque', 'bijouterie']
-        && (data.montant == null
-            || (data.montant is number && data.montant >= 0 && data.montant <= 1000000000000))
         // Jamais dans le futur
         && data.date is timestamp
         && data.date <= request.time
@@ -596,13 +594,14 @@ service cloud.firestore {
 
       allow create: if isValide()
         && amendeValide(request.resource.data)
+        && !('montant' in request.resource.data)
         && request.resource.data.creeParUid == request.auth.uid
         && request.resource.data.createdAt == request.time;
 
-      // Correction du montant et de la note, ou suppression : l'auteur de la saisie, le joueur concerné, un gradé
+      // Correction de la note, ou suppression : l'auteur de la saisie, le joueur concerné, un gradé
       allow update: if isValide()
         && (isGrade() || resource.data.creeParUid == request.auth.uid || resource.data.membreUid == request.auth.uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['montant', 'note'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note'])
         && amendeValide(request.resource.data);
 
       allow delete: if isValide()

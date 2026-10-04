@@ -14,7 +14,6 @@ import {
   nomDelit,
   recidivesEnCours,
 } from '../lib/delits'
-import { formatPrix } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
 import { aAuMoins, estValide, nomAffiche, rang } from '../lib/roles'
 import type { Amende } from '../types'
@@ -42,10 +41,9 @@ export function Amendes() {
     .sort((a, b) => rang(b.role) - rang(a.role) || nomAffiche(a).localeCompare(nomAffiche(b), 'fr'))
   const recidives = recidivesEnCours(amendes.data, maintenant)
 
-  const somme = (liste: Amende[]) => liste.reduce((total, a) => total + (a.montant ?? 0), 0)
-  const totalSemaine = somme(amendes.data.filter((a) => a.date.toMillis() > maintenant - SEMAINE_MS))
-  const totalParMembre = new Map<string, number>()
-  for (const a of amendes.data) totalParMembre.set(a.membreUid, (totalParMembre.get(a.membreUid) ?? 0) + (a.montant ?? 0))
+  const nombreSemaine = amendes.data.filter((a) => a.date.toMillis() > maintenant - SEMAINE_MS).length
+  const nombreParMembre = new Map<string, number>()
+  for (const a of amendes.data) nombreParMembre.set(a.membreUid, (nombreParMembre.get(a.membreUid) ?? 0) + 1)
 
   const peutCorriger = (a: Amende) => estGrade || a.creeParUid === moi.uid || a.membreUid === moi.uid
   const nomDe = (uid: string) => {
@@ -73,8 +71,8 @@ export function Amendes() {
         <>
           <div className="grid gap-4 sm:grid-cols-3">
             <Chiffre label="Récidives en cours" valeur={String(recidives.size)} alerte={recidives.size > 0} />
-            <Chiffre label="Amendes des 7 derniers jours" valeur={formatPrix(totalSemaine)} />
-            <Chiffre label="Total des amendes" valeur={formatPrix(somme(amendes.data))} />
+            <Chiffre label="Amendes des 7 derniers jours" valeur={String(nombreSemaine)} />
+            <Chiffre label="Amendes depuis le début" valeur={String(amendes.data.length)} />
           </div>
 
           <Card className="p-4!">
@@ -142,7 +140,7 @@ export function Amendes() {
                         )
                       })}
                       <td className="px-2 py-1 text-right text-sm whitespace-nowrap text-zinc-300 tabular-nums">
-                        {totalParMembre.has(m.uid) ? formatPrix(totalParMembre.get(m.uid)) : '—'}
+                        {nombreParMembre.get(m.uid) ?? '—'}
                       </td>
                     </tr>
                   ))}
@@ -165,8 +163,7 @@ export function Amendes() {
                       <th className="pb-2 font-medium">Date</th>
                       <th className="pb-2 font-medium">Joueur</th>
                       <th className="pb-2 font-medium">Délit</th>
-                      <th className="pb-2 text-right font-medium">Montant</th>
-                      <th className="pb-2 pl-4 font-medium">Note</th>
+                      <th className="pb-2 font-medium">Note</th>
                       <th className="pb-2 font-medium">Saisie par</th>
                       <th />
                     </tr>
@@ -184,10 +181,7 @@ export function Amendes() {
                             </span>
                           )}
                         </td>
-                        <td className="py-2 text-right whitespace-nowrap text-zinc-100 tabular-nums">
-                          {formatPrix(a.montant)}
-                        </td>
-                        <td className="max-w-64 truncate py-2 pr-4 pl-4 text-zinc-400" title={a.note}>
+                        <td className="max-w-64 truncate py-2 pr-4 text-zinc-400" title={a.note}>
                           {a.note || '—'}
                         </td>
                         <td className="py-2 pr-4 whitespace-nowrap text-zinc-400">{nomDe(a.creeParUid)}</td>
