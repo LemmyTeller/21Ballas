@@ -18,6 +18,7 @@ const LIENS: { to: string; label: string; minimum: Role }[] = [
   { to: '/commerce', label: 'Commerce', minimum: 'membre' },
   { to: '/blanchiment', label: 'Blanchiment', minimum: 'membre' },
   { to: '/carjacking', label: 'Carjacking', minimum: 'membre' },
+  { to: '/amendes', label: 'Amendes', minimum: 'membre' },
   { to: '/annuaire', label: 'Annuaire', minimum: 'membre' },
   { to: '/inventaire', label: 'Inventaire', minimum: 'n2' },
   { to: '/journal', label: 'Journal', minimum: 'n2' },
@@ -32,6 +33,7 @@ const LARGEURS: Record<string, string> = {
   '/blanchiment': 'max-w-7xl',
   '/carjacking': 'max-w-7xl',
   '/stock': 'max-w-[110rem]',
+  '/amendes': 'max-w-[110rem]',
 }
 
 const lienBase = 'block whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors'

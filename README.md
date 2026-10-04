@@ -143,6 +143,18 @@ Un dépôt est lancé (les billets de 1$ sortent du stock du lieu choisi, dans l
 il passe alors dans l'historique et ne change plus. « Prêt à récupérer » se déduit de l'heure de fin, sans tâche planifiée.
 Un dépôt en cours peut être annulé : il est supprimé et les billets retournent dans le stock.
 
+## Amendes
+
+Onglet **Amendes**, ouvert à tous les membres validés. Il remplace le tableau joueurs × délits du groupe.
+
+- Collection `amendes` : joueur (`membreUid`, `membreNom`), `delit`, `montant` (facultatif), `date`, `note`, `creeParUid`.
+- Les 16 délits et leurs 3 catégories sont fixes, dans `src/lib/delits.ts` (liste reprise dans `firestore.rules`).
+- **Récidive** : une amende met le joueur en récidive sur ce délit pendant 24 h. Rien n'est stocké : la fin se déduit de `date`,
+  et une nouvelle amende dans le délai est affichée « Récidive » et relance 24 h.
+- Tout membre validé note une amende, pour lui ou pour un autre. Montant et note se corrigent, et l'amende se supprime,
+  par l'auteur de la saisie, le joueur concerné ou Admin, N1, N2. Une amende ne peut pas être datée dans le futur.
+- L'accueil liste les récidives en cours, avec le temps restant.
+
 ## Annuaire
 
 Onglet **Annuaire**, visible par tous les membres validés ; Admin, N1 et N2 ajoutent, modifient et suppriment.

@@ -8,6 +8,17 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.18.0',
+    date: '2026-10-04',
+    changements: [
+      'Nouvel onglet Amendes : la grille joueurs × délits, où chaque amende ouvre 24 h de récidive pour ce joueur et ce délit.',
+      'La case affiche le temps de récidive restant et se vide toute seule au bout de 24 h.',
+      'Chaque amende peut porter son montant : total par joueur, sur 7 jours et depuis le début.',
+      'Historique des amendes, avec la mention « Récidive » quand le joueur s’est fait reprendre dans le délai.',
+      'Accueil : l’encart « Récidives en cours » liste qui est en récidive, sur quel délit et pour combien de temps.',
+    ],
+  },
+  {
     version: '0.17.0',
     date: '2026-10-03',
     changements: [

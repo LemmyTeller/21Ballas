@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMembre } from '../auth/AuthContext'
 import { Avatar, Button, Card, Chargement, ErrorMessage, RoleBadge } from '../components/ui'
+import { RecidivesEnCours } from '../features/amendes/RecidivesEnCours'
 import { supprimerAnnonce } from '../features/annonces/api'
 import { NouvelleAnnonceDialog } from '../features/annonces/NouvelleAnnonceDialog'
 import { useAnnonces } from '../features/annonces/useAnnonces'
@@ -50,7 +51,11 @@ export function Accueil() {
               les contrats, chacun dans une colonne de la même largeur que la liste de présence */}
           <div className="mt-auto grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[minmax(0,1fr)_19rem_19rem]">
             <SaisieJournaliere />
-            <BlanchimentsEnCours />
+            {/* Blanchiments et récidives en cours, l'un au-dessus de l'autre dans la même colonne */}
+            <div className="flex flex-col gap-6">
+              <RecidivesEnCours />
+              <BlanchimentsEnCours />
+            </div>
             <Contrats membre={membre} />
           </div>
         </>

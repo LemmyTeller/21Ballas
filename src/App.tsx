@@ -8,6 +8,7 @@ import { MigrationAdmin } from './features/members/MigrationAdmin'
 import { AppLayout } from './layout/AppLayout'
 import { auth } from './lib/firebase'
 import { Accueil } from './pages/Accueil'
+import { Amendes } from './pages/Amendes'
 import { Annuaire } from './pages/Annuaire'
 import { Blanchiment } from './pages/Blanchiment'
 import { Carjacking } from './pages/Carjacking'
@@ -56,6 +57,7 @@ function Portail() {
           <Route path="annuaire" element={<Annuaire />} />
           <Route path="blanchiment" element={<Blanchiment />} />
           <Route path="carjacking" element={<Carjacking />} />
+          <Route path="amendes" element={<Amendes />} />
           <Route path="profil" element={<Profil />} />
           <Route
             path="inventaire"
