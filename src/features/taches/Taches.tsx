@@ -12,8 +12,11 @@ import { useTaches } from './useTaches'
 // les gradés (Admin, N1, N2) ajoutent, réordonnent et suppriment.
 export function Taches({ membre }: { membre: Membre }) {
   const taches = useTaches()
-  // Nombre de voitures en attente d'être volées, pour la tâche automatique
-  const aVoler = useCarjackings().data.filter((c) => c.statut === 'a_voler').length
+  // Voitures en attente d'être volées, pour la tâche automatique : les plus anciennes demandes d'abord
+  const voitures = useCarjackings()
+    .data.filter((c) => c.statut === 'a_voler')
+    .sort((a, b) => (a.createdAt?.toMillis() ?? Infinity) - (b.createdAt?.toMillis() ?? Infinity))
+  const aVoler = voitures.length
   const [saisie, setSaisie] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const estGrade = aAuMoins(membre, 'n2')
@@ -100,6 +103,11 @@ export function Taches({ membre }: { membre: Membre }) {
                   {' '}
                   · {aVoler} voiture{aVoler > 1 ? 's' : ''} à voler
                 </span>
+                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-zinc-300">
+                  {voitures.map((v) => (
+                    <li key={v.id}>{v.modele}</li>
+                  ))}
+                </ul>
               </Link>
             </li>
           )}
