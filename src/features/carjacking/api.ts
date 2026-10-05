@@ -10,6 +10,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
+import { jourDeSaisie } from '../../lib/journee'
 import type { Article, Carjacking } from '../../types'
 import { REFERENCE_ARGENT_SALE } from '../commerce/api'
 
@@ -62,7 +63,8 @@ export interface Rachat {
   lieuId: string | null
 }
 
-// Clôt la fiche. Si la voiture est rachetée, les billets de 1$ entrent dans le stock du lieu, dans la même écriture.
+// Clôt la fiche. Si la voiture est rachetée, les billets de 1$ entrent dans le stock du lieu et dans la saisie
+// journalière, dans la même écriture.
 export async function cloturerCarjacking(
   id: string,
   rachat: Rachat,
@@ -91,6 +93,15 @@ export async function cloturerCarjacking(
         updatedAt: serverTimestamp(),
       })
     }
+  }
+
+  // Le sale du rachat est une entrée du jour : il s'inscrit dans la saisie journalière, même sans toucher au stock
+  if (rachat.rachete && billets > 0) {
+    batch.set(
+      doc(db, 'saisies', jourDeSaisie(Date.now())),
+      { quantites: { [REFERENCE_ARGENT_SALE]: increment(billets) }, updatedAt: serverTimestamp() },
+      { merge: true },
+    )
   }
 
   await batch.commit()

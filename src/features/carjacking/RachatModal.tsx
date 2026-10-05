@@ -103,7 +103,10 @@ export function RachatModal({
           </>
         )}
 
-        <p className="text-xs text-zinc-500">Une fois enregistrée, la fiche part dans l’historique et ne se modifie plus.</p>
+        <p className="text-xs text-zinc-500">
+          {rachete && 'Le montant s’ajoute à la saisie journalière. '}
+          Une fois enregistrée, la fiche part dans l’historique et ne se modifie plus.
+        </p>
         <ErrorMessage>{erreur}</ErrorMessage>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
