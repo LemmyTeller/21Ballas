@@ -101,15 +101,16 @@ export function Logo({ className = 'size-20' }: { className?: string }) {
 }
 
 // Logo en filigrane, fixe derrière le contenu de la page : il se voit dans les espaces libres, pas à travers
-// les encarts. `apresMenu` le centre dans la zone de contenu, à droite du menu latéral.
-export function Filigrane({ apresMenu = false }: { apresMenu?: boolean }) {
+// les encarts. `apresMenu` le centre dans la zone de contenu, à droite du menu latéral (plus étroit quand il est
+// rétracté).
+export function Filigrane({ apresMenu = false, menuReduit = false }: { apresMenu?: boolean; menuReduit?: boolean }) {
   return (
     <img
       src={logoChargement}
       alt=""
       aria-hidden="true"
       className={`pointer-events-none fixed inset-0 -z-10 m-auto size-[min(70svh,70vw)] object-contain opacity-20 select-none ${
-        apresMenu ? 'md:left-60' : ''
+        apresMenu ? (menuReduit ? 'md:left-20' : 'md:left-60') : ''
       }`}
     />
   )

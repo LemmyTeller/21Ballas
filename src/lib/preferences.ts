@@ -42,6 +42,16 @@ export function enregistrerTaille(taille: Taille) {
   appliquerTaille(taille)
 }
 
+// ---- Menu rétracté ----
+
+const CLE_MENU = 'ballas.menu'
+
+export const lireMenuReduit = () => lire(CLE_MENU) === 'reduit'
+
+export function enregistrerMenuReduit(reduit: boolean) {
+  ecrire(CLE_MENU, reduit ? 'reduit' : null)
+}
+
 // ---- Disposition de l'accueil ----
 
 // Les encarts de l'accueil, dans l'ordre des emplacements par défaut : rangée du haut (large, large, étroit),
