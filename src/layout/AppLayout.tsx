@@ -5,6 +5,7 @@ import { useMembre } from '../auth/AuthContext'
 import { VERSION } from '../changelog'
 import { ChangelogModal } from '../components/ChangelogModal'
 import { Avatar, Button, Filigrane, Logo, RoleBadge } from '../components/ui'
+import { usePresenceActive } from '../features/members/usePresenceActive'
 import { auth } from '../lib/firebase'
 import { aAuMoins, nomAffiche } from '../lib/roles'
 import type { Role } from '../types'
@@ -15,7 +16,7 @@ const LIENS: { to: string; label: string; minimum: Role }[] = [
   { to: '/gestion', label: 'Gestion', minimum: 'membre' },
   { to: '/stock', label: 'Stock', minimum: 'membre' },
   { to: '/tarifs', label: 'Tarifs', minimum: 'membre' },
-  { to: '/commerce', label: 'Commerce', minimum: 'membre' },
+  { to: '/transactions', label: 'Transactions', minimum: 'membre' },
   { to: '/blanchiment', label: 'Blanchiment', minimum: 'membre' },
   { to: '/carjacking', label: 'Carjacking', minimum: 'membre' },
   { to: '/amendes', label: 'Amendes', minimum: 'membre' },
@@ -28,7 +29,7 @@ const LIENS: { to: string; label: string; minimum: Role }[] = [
 const LARGEURS: Record<string, string> = {
   '/': 'max-w-7xl',
   '/tarifs': 'max-w-7xl',
-  '/commerce': 'max-w-7xl',
+  '/transactions': 'max-w-7xl',
   '/annuaire': 'max-w-7xl',
   '/blanchiment': 'max-w-7xl',
   '/carjacking': 'max-w-7xl',
@@ -42,6 +43,7 @@ export function AppLayout() {
   const membre = useMembre()
   const { pathname } = useLocation()
   const [changelog, setChangelog] = useState(false)
+  usePresenceActive(membre)
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">

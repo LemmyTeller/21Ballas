@@ -104,9 +104,10 @@ export function Commerce() {
     <>
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-50">Commerce</h1>
+          <h1 className="text-2xl font-bold text-zinc-50">Transactions</h1>
           <p className="text-sm text-zinc-400">
-            Ventes et achats avec les groupes et petites mains. Une commande se crée depuis l’onglet Tarifs.
+            Ventes et achats avec les groupes et petites mains. Une transaction se crée depuis l’onglet Tarifs ; à la
+            validation, ce qui entre (argent sale, items) s’ajoute à la saisie journalière.
           </p>
         </div>
         <div className="flex rounded-lg border border-zinc-800 p-0.5">

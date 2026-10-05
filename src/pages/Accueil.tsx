@@ -113,7 +113,7 @@ function Joueurs({ moi, membres }: { moi: Membre; membres: Membre[] }) {
               </p>
               {present && membre.presenceAt && (
                 <p className="text-xs text-zinc-500">
-                  depuis {membre.presenceAt.toDate().toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
+                  actif à {membre.presenceAt.toDate().toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
                 </p>
               )}
             </div>

@@ -8,6 +8,15 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '0.19.0',
+    date: '2026-10-05',
+    changements: [
+      'L’onglet Commerce s’appelle maintenant Transactions.',
+      'Une transaction validée inscrit toute seule ses entrées (argent sale reçu, items achetés ou repris) dans la saisie journalière.',
+      'Présence : elle se prolonge tant que tu te sers de l’appli, et ne retombe qu’après 4 h sans activité.',
+    ],
+  },
+  {
     version: '0.18.1',
     date: '2026-10-04',
     changements: [

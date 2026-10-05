@@ -5,7 +5,7 @@ import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import { formatNombre, formatPrix } from '../../lib/format'
 import type { Article, Commande, Lieu, Reference } from '../../types'
 import { quantiteDans } from '../stock/useArticles'
-import { lignesDe, montantAttendu, titreCommande, validerCommande, variationsStock, type Cloture } from './api'
+import { entreesSaisie, lignesDe, montantAttendu, titreCommande, validerCommande, variationsStock, type Cloture } from './api'
 
 interface ItemEchange {
   reference: Reference
@@ -81,6 +81,8 @@ export function ValidationModal({
     return { reference, delta, disponible, insuffisant: delta < 0 && disponible < -delta }
   })
 
+  const entrees = [...entreesSaisie(commande, cloture)]
+
   async function valider(e: FormEvent) {
     e.preventDefault()
     setEnvoi(true)
@@ -154,6 +156,13 @@ export function ValidationModal({
               </li>
             ))}
           </ul>
+        )}
+
+        {entrees.length > 0 && (
+          <p className="text-xs text-zinc-500">
+            Ajouté à la saisie journalière :{' '}
+            {entrees.map(([reference, quantite]) => `${formatNombre(quantite)} ${nom(reference)}`).join(', ')}.
+          </p>
         )}
 
         <label className="block space-y-1 text-sm">

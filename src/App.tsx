@@ -53,7 +53,9 @@ function Portail() {
           <Route path="gestion" element={<Gestion />} />
           <Route path="stock" element={<Stock />} />
           <Route path="tarifs" element={<Tarifs />} />
-          <Route path="commerce" element={<Commerce />} />
+          <Route path="transactions" element={<Commerce />} />
+          {/* Ancienne adresse de l'onglet, du temps où il s'appelait Commerce */}
+          <Route path="commerce" element={<Navigate to="/transactions" replace />} />
           <Route path="annuaire" element={<Annuaire />} />
           <Route path="blanchiment" element={<Blanchiment />} />
           <Route path="carjacking" element={<Carjacking />} />

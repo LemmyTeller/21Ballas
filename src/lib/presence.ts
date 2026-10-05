@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Membre } from '../types'
 
-// Sans nouveau clic, une présence retombe d'elle-même à « absent » après ce délai
+// Sans activité dans l'appli, une présence retombe d'elle-même à « absent » après ce délai.
+// `presenceAt` est l'heure de la dernière activité : voir usePresenceActive.
 export const DUREE_PRESENCE_H = 4
 
 export function estPresent(membre: Pick<Membre, 'present' | 'presenceAt'>, maintenant: number): boolean {

@@ -164,11 +164,13 @@ Chaque organisation a une couleur (`couleur`, `#rrggbb`) affichée en tuile ; el
 Le tableau est trié par organisation (Cartel d'abord, puis ordre alphabétique), les contacts sans rattachement à la fin.
 Supprimer un partenaire conserve ses contacts, qui passent sans rattachement.
 
-## Commerce (ventes et achats)
+## Transactions (ventes et achats)
 
 Une commande se crée depuis l'onglet Tarifs, par le bouton « ⋯ » d'une ligne : quantité, puis nouvelle commande ou ajout à celle
 déjà en attente avec le partenaire. Une même commande peut mêler des ventes et des achats : chaque ligne porte son sens.
-L'onglet **Commerce** liste les commandes en cours et l'historique.
+L'onglet **Transactions** (anciennement Commerce) liste les commandes en cours et l'historique.
+À la validation, ce que la transaction fait entrer (argent sale reçu, items achetés ou repris en échange) s'ajoute à la saisie
+journalière du jour, qui sert de journal des entrées (`entreesSaisie` dans `src/features/commerce/api.ts`).
 
 | Étape | Qui | Effet |
 |---|---|---|
@@ -193,7 +195,8 @@ lisible par le joueur lui-même et par les admins uniquement.
 
 ## Présence
 
-Chaque joueur se déclare présent depuis l'accueil. Sans nouveau clic, la présence retombe à « absent » après 4 h
+Chaque joueur se déclare présent depuis l'accueil. Tant qu'il se sert de l'appli, sa présence est prolongée (au plus une écriture
+toutes les 10 minutes, `usePresenceActive`) ; elle retombe à « absent » après 4 h sans activité
 (`DUREE_PRESENCE_H` dans `src/lib/presence.ts`).
 
 ## Commandes

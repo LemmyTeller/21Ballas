@@ -1,5 +1,15 @@
-import { addDoc, collection, doc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
+import {
+  addDoc,
+  collection,
+  doc,
+  increment,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
+  type FieldValue,
+} from 'firebase/firestore'
 import { db } from '../../lib/firebase'
+import { jourDeSaisie } from '../../lib/journee'
 import type { Article, Commande, Echange, LigneCommande, Partenaire, SensTarif } from '../../types'
 import { quantiteDans } from '../stock/useArticles'
 
@@ -83,8 +93,22 @@ export function variationsStock(commande: Commande, cloture: Cloture): Map<strin
   return variations
 }
 
-// Validation : la commande est close et le stock du lieu mis à jour, dans la même écriture.
-// Sans lieu, seule la commande est close.
+// Ce que la transaction fait entrer, par item : les items achetés, les items repris en échange et l'argent sale
+// reçu (billets de 1$). Ce sont des entrées brutes : ce qui sort en face n'est pas déduit.
+export function entreesSaisie(commande: Commande, cloture: Cloture): Map<string, number> {
+  const entrees = new Map<string, number>()
+  const ajouter = (reference: string, quantite: number) => {
+    if (quantite > 0) entrees.set(reference, (entrees.get(reference) ?? 0) + quantite)
+  }
+
+  for (const ligne of lignesDe(commande, 'achat')) ajouter(ligne.reference, ligne.quantite)
+  for (const item of cloture.recuItems) ajouter(item.reference, item.quantite)
+  ajouter(REFERENCE_ARGENT_SALE, Math.round(cloture.recuSale ?? 0))
+  return entrees
+}
+
+// Validation : la commande est close, le stock du lieu mis à jour et les entrées ajoutées à la saisie du jour,
+// dans la même écriture. Sans lieu, le stock n'est pas touché.
 export async function validerCommande(
   commande: Commande,
   cloture: Cloture,
@@ -113,6 +137,18 @@ export async function validerCommande(
         })
       }
     }
+  }
+
+  // La saisie journalière est le journal des entrées, jour par jour : la transaction s'y inscrit toute seule
+  const entrees = entreesSaisie(commande, cloture)
+  if (entrees.size > 0) {
+    const quantites: Record<string, FieldValue> = {}
+    for (const [reference, quantite] of entrees) quantites[reference] = increment(quantite)
+    batch.set(
+      doc(db, 'saisies', jourDeSaisie(Date.now())),
+      { quantites, updatedAt: serverTimestamp() },
+      { merge: true },
+    )
   }
 
   batch.update(doc(db, 'commandes', commande.id), {
