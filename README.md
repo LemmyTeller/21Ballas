@@ -193,6 +193,16 @@ Seules des informations RP sont affichées et stockées dans la fiche publique `
 Le nom et la photo Google ne sont jamais enregistrés. L'email du compte est dans `users/{uid}/prive/compte`,
 lisible par le joueur lui-même et par les admins uniquement.
 
+## Réglages par joueur (navigateur)
+
+Deux réglages de confort sont gardés dans le `localStorage` du navigateur, pas en base (`src/lib/preferences.ts`) :
+
+- **Taille d'affichage** (Paramètres → Affichage) : 100, 90 ou 80 %, 90 % par défaut. Elle règle la taille de base de la page,
+  et comme tout est dimensionné en `rem`, tout l'intranet suit.
+- **Disposition de l'accueil** (bouton « Disposition ») : les 7 emplacements sont fixes, les encarts échangent leurs places
+  par glisser-déposer ou en deux touches. Chaque encart a une largeur (Auto, Étroit, Moyen, Large) qui le suit quand il
+  change de place. « Réinitialiser » rend la disposition et les largeurs d'origine.
+
 ## Présence
 
 Chaque joueur se déclare présent depuis l'accueil. Tant qu'il se sert de l'appli, sa présence est prolongée (au plus une écriture

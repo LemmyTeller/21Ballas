@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useMembre } from '../auth/AuthContext'
 import { Avatar, Button, Card, Chargement, ErrorMessage, RoleBadge } from '../components/ui'
+import { Emplacement } from '../features/accueil/Emplacement'
 import { RecidivesEnCours } from '../features/amendes/RecidivesEnCours'
 import { supprimerAnnonce } from '../features/annonces/api'
 import { NouvelleAnnonceDialog } from '../features/annonces/NouvelleAnnonceDialog'
@@ -12,6 +13,15 @@ import { basculerPresence } from '../features/members/api'
 import { useMembres } from '../features/members/useMembres'
 import { SaisieJournaliere } from '../features/saisie/SaisieJournaliere'
 import { Taches } from '../features/taches/Taches'
+import {
+  LARGEURS,
+  enregistrerDisposition,
+  enregistrerLargeurs,
+  lireDisposition,
+  lireLargeurs,
+  type Encart,
+  type Largeur,
+} from '../lib/preferences'
 import { estPresent, useMaintenant } from '../lib/presence'
 import { aAuMoins, estValide, formatDate, nomAffiche, rang } from '../lib/roles'
 import type { Annonce, Membre } from '../types'
@@ -22,10 +32,93 @@ export function Accueil() {
   const estGrade = aAuMoins(membre, 'n2')
   const enAttente = membres.data.filter((m) => m.role === 'pending' && m.nomRP.trim()).length
 
+  // Disposition propre au joueur : `disposition[i]` est l'encart affiché dans l'emplacement i
+  const [disposition, setDisposition] = useState(lireDisposition)
+  const [edition, setEdition] = useState(false)
+  // Emplacement de l'encart en cours de déplacement, et celui qu'il survole
+  const [choisi, setChoisi] = useState<number | null>(null)
+  const [survole, setSurvole] = useState<number | null>(null)
+
+  function echanger(a: number, b: number) {
+    if (a === b) return
+    const suivante = [...disposition]
+    ;[suivante[a], suivante[b]] = [suivante[b], suivante[a]]
+    setDisposition(suivante)
+    enregistrerDisposition(suivante)
+  }
+
+  // Fin d'un déplacement, au dépôt ou à la deuxième touche
+  function placer(emplacement: number) {
+    if (choisi !== null) echanger(choisi, emplacement)
+    setChoisi(null)
+    setSurvole(null)
+  }
+
+  // Largeur de chaque encart : elle le suit quand il change de place
+  const [largeurs, setLargeurs] = useState(lireLargeurs)
+
+  function reglerLargeur(encart: Encart, largeur: Largeur) {
+    const suivantes = { ...largeurs, [encart]: largeur }
+    setLargeurs(suivantes)
+    enregistrerLargeurs(suivantes)
+  }
+
+  function reinitialiser() {
+    enregistrerDisposition(null)
+    enregistrerLargeurs(null)
+    setDisposition(lireDisposition())
+    setLargeurs(lireLargeurs())
+    setChoisi(null)
+  }
+
+  // Colonne de grille d'un emplacement ; pour deux encarts l'un sur l'autre, le plus large des deux l'emporte
+  const ORDRE: Largeur[] = ['etroit', 'moyen', 'large', 'auto']
+  const colonne = (...emplacements: number[]) => {
+    const rangs = emplacements.map((i) => ORDRE.indexOf(largeurs[disposition[i]]))
+    return LARGEURS[ORDRE[Math.max(...rangs)]].colonne
+  }
+  // Variables lues par les classes de grille : elles ne s'appliquent que sur grand écran, où les encarts sont côte à côte
+  const colonnes = {
+    '--haut': `${colonne(0)} ${colonne(1)} ${colonne(2)}`,
+    '--bas': `${colonne(3)} ${colonne(4, 5)} ${colonne(6)}`,
+    '--bas-2': `${colonne(3)} ${colonne(4, 5)}`,
+  } as CSSProperties
+
+  const encarts: Record<Encart, { nom: string; contenu: ReactNode }> = {
+    taches: { nom: 'Tâches', contenu: <Taches membre={membre} /> },
+    annonces: { nom: 'Annonces', contenu: <Annonces membre={membre} membres={membres.data} /> },
+    presents: { nom: 'Présents', contenu: <Joueurs moi={membre} membres={membres.data} /> },
+    saisie: { nom: 'Saisie journalière', contenu: <SaisieJournaliere /> },
+    recidives: { nom: 'Récidives', contenu: <RecidivesEnCours /> },
+    blanchiment: { nom: 'Blanchiment', contenu: <BlanchimentsEnCours /> },
+    contrats: { nom: 'Contrats', contenu: <Contrats membre={membre} /> },
+  }
+
+  const emplacement = (i: number) => {
+    const encart = encarts[disposition[i]]
+    return (
+      <Emplacement
+        key={disposition[i]}
+        nom={encart.nom}
+        edition={edition}
+        choisi={choisi === i}
+        survole={survole === i && choisi !== null && choisi !== i}
+        largeur={largeurs[disposition[i]]}
+        onLargeur={(largeur) => reglerLargeur(disposition[i], largeur)}
+        onChoisir={() => (choisi === null ? setChoisi(i) : placer(i))}
+        onGlisser={() => setChoisi(i)}
+        onSurvoler={(dessus) => setSurvole(dessus ? i : null)}
+        onDeposer={() => placer(i)}
+      >
+        {encart.contenu}
+      </Emplacement>
+    )
+  }
+
   return (
     // Occupe au moins la hauteur de l'écran (moins les marges de la page), pour que la rangée du bas
     // reste calée en bas même quand le haut de la page est peu rempli
-    <div className="flex flex-col gap-6 md:min-h-[calc(100svh-4rem)]">
+    <div className="flex flex-col gap-6 md:min-h-[calc(100svh-4rem)]" style={colonnes}>
       {estGrade && enAttente > 0 && (
         <Link
           to="/membres"
@@ -41,22 +134,51 @@ export function Accueil() {
         <Chargement />
       ) : (
         <>
-          {/* Tâches et annonces se partagent la largeur restante, encart de présence étroit calé à droite */}
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_19rem]">
-            <Taches membre={membre} />
-            <Annonces membre={membre} membres={membres.data} />
-            <Joueurs moi={membre} membres={membres.data} />
+          {/* Chaque joueur range les encarts à sa façon : en modification, ils échangent leurs places */}
+          <div className="-mb-3 flex flex-wrap items-center justify-end gap-2">
+            {edition ? (
+              <>
+                <p className="mr-auto text-sm text-zinc-400">
+                  Glisse un encart sur un autre pour échanger leurs places, ou touche-les l’un après l’autre. La liste
+                  en haut à droite de chaque encart règle sa largeur.
+                </p>
+                <Button variant="ghost" onClick={reinitialiser}>
+                  Réinitialiser
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEdition(false)
+                    setChoisi(null)
+                  }}
+                >
+                  Terminer
+                </Button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="text-xs text-zinc-500 hover:text-purple-300"
+                onClick={() => setEdition(true)}
+              >
+                Disposition
+              </button>
+            )}
           </div>
-          {/* Calés en bas de page : la saisie du butin du jour à gauche, puis les blanchiments en cours et
-              les contrats, chacun dans une colonne de la même largeur que la liste de présence */}
-          <div className="mt-auto grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[minmax(0,1fr)_19rem_19rem]">
-            <SaisieJournaliere />
-            {/* Blanchiments et récidives en cours, l'un au-dessus de l'autre dans la même colonne */}
-            <div className="flex flex-col gap-6">
-              <RecidivesEnCours />
-              <BlanchimentsEnCours />
+          {/* Rangée du haut : trois emplacements, chacun de la largeur de l'encart qu'il porte */}
+          <div className="grid items-start gap-6 lg:grid-cols-(--haut)">
+            {emplacement(0)}
+            {emplacement(1)}
+            {emplacement(2)}
+          </div>
+          {/* Rangée du bas, calée en bas de page : trois colonnes, celle du milieu portant deux encarts l'un sur
+              l'autre. Sur écran moyen, la troisième passe à la ligne. */}
+          <div className="mt-auto grid items-end gap-6 lg:grid-cols-(--bas-2) xl:grid-cols-(--bas)">
+            {emplacement(3)}
+            <div className="flex min-w-0 flex-col gap-6">
+              {emplacement(4)}
+              {emplacement(5)}
             </div>
-            <Contrats membre={membre} />
+            {emplacement(6)}
           </div>
         </>
       )}

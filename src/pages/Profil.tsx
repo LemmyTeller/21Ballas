@@ -7,6 +7,7 @@ import { useLieux } from '../features/gestion/useLieux'
 import { useVehicules } from '../features/gestion/useVehicules'
 import { VehiculeModal } from '../features/gestion/VehiculeModal'
 import { ProfilForm } from '../features/members/ProfilForm'
+import { TAILLES, enregistrerTaille, lireTaille } from '../lib/preferences'
 import type { Vehicule } from '../types'
 
 // Page Paramètres : tout ce que le joueur saisit lui-même, relu ensuite dans l'onglet Gestion
@@ -16,6 +17,7 @@ export function Profil() {
   const lieux = useLieux()
   // `null` : fenêtre fermée ; `{}` : ajout ; `{ vehicule }` : modification
   const [fenetre, setFenetre] = useState<{ vehicule?: Vehicule } | null>(null)
+  const [taille, setTaille] = useState(lireTaille)
 
   const miens = vehicules.data
     .filter((v) => v.proprietaireUid === membre.uid)
@@ -38,6 +40,32 @@ export function Profil() {
           <SoldeForm membre={membre} />
         </Card>
       </div>
+
+      <Card title="Affichage">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex rounded-lg border border-zinc-800 p-0.5">
+            {TAILLES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={taille === t}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  taille === t ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                }`}
+                onClick={() => {
+                  enregistrerTaille(t)
+                  setTaille(t)
+                }}
+              >
+                {t} %
+              </button>
+            ))}
+          </div>
+          <p className="text-sm text-zinc-400">
+            Taille de tout l’intranet. Réglage gardé dans ce navigateur, comme la disposition de l’accueil.
+          </p>
+        </div>
+      </Card>
 
       <Card title="Mes véhicules" action={<Button onClick={() => setFenetre({})}>+ Ajouter un véhicule</Button>}>
         <ErrorMessage>{vehicules.error ?? lieux.error}</ErrorMessage>

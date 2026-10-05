@@ -8,6 +8,16 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.0.0',
+    date: '2026-10-05',
+    changements: [
+      'Version prod : l’intranet sort de sa phase de construction.',
+      'Affichage plus compact : l’intranet passe à 90 %. Chacun règle sa taille (100, 90 ou 80 %) dans les Paramètres.',
+      'Accueil : le bouton « Disposition » permet à chacun de ranger les encarts à sa façon, en les glissant l’un sur l’autre, et de régler la largeur de chacun.',
+      'Ces deux réglages sont gardés dans le navigateur : ils sont à refaire sur un autre appareil.',
+    ],
+  },
+  {
     version: '0.19.2',
     date: '2026-10-05',
     changements: ['Accueil : la tâche « Vol de véhicule demandé » liste les voitures à voler.'],

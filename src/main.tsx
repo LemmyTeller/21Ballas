@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { ConfigManquante } from './ConfigManquante.tsx'
 import { isConfigured } from './lib/config.ts'
+import { appliquerTaille, lireTaille } from './lib/preferences.ts'
+
+// Avant le premier rendu : l'appli s'ouvre directement à la taille choisie par le joueur
+appliquerTaille(lireTaille())
 
 const root = createRoot(document.getElementById('root')!)
 
