@@ -155,6 +155,13 @@ Onglet **Amendes**, ouvert à tous les membres validés. Il remplace le tableau 
   par l'auteur de la saisie, le joueur concerné ou Admin, N1, N2. Une amende ne peut pas être datée dans le futur.
 - L'accueil liste les récidives en cours, avec le temps restant.
 
+## Event (course au produit)
+
+Onglet **Event**, visible par tous les membres validés. Un seul event à la fois, dans le document `events/courant` :
+`nom` et `points` (table item → points par unité). Admin, N1 et N2 ajoutent les items, règlent leurs points, renomment et vident l'event.
+Les quantités ne sont pas stockées : elles sont lues dans le Stock, tous lieux confondus. Score d'un item = quantité × points ;
+le score total suit donc le stock en temps réel.
+
 ## Annuaire
 
 Onglet **Annuaire**, visible par tous les membres validés ; Admin, N1 et N2 ajoutent, modifient et suppriment.

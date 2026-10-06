@@ -13,6 +13,7 @@ import { Annuaire } from './pages/Annuaire'
 import { Blanchiment } from './pages/Blanchiment'
 import { Carjacking } from './pages/Carjacking'
 import { Commerce } from './pages/Commerce'
+import { Event } from './pages/Event'
 import { Gestion } from './pages/Gestion'
 import { Inventaire } from './pages/Inventaire'
 import { Journal } from './pages/Journal'
@@ -60,6 +61,7 @@ function Portail() {
           <Route path="blanchiment" element={<Blanchiment />} />
           <Route path="carjacking" element={<Carjacking />} />
           <Route path="amendes" element={<Amendes />} />
+          <Route path="event" element={<Event />} />
           <Route path="profil" element={<Profil />} />
           <Route
             path="inventaire"

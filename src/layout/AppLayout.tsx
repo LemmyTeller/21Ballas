@@ -21,6 +21,7 @@ const LIENS: { to: string; label: string; minimum: Role }[] = [
   { to: '/blanchiment', label: 'Blanchiment', minimum: 'membre' },
   { to: '/carjacking', label: 'Carjacking', minimum: 'membre' },
   { to: '/amendes', label: 'Amendes', minimum: 'membre' },
+  { to: '/event', label: 'Event', minimum: 'membre' },
   { to: '/annuaire', label: 'Annuaire', minimum: 'membre' },
   { to: '/inventaire', label: 'Inventaire', minimum: 'n2' },
   { to: '/journal', label: 'Journal', minimum: 'n2' },

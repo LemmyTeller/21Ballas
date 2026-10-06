@@ -586,6 +586,21 @@ service cloud.firestore {
 
     // ---- Contrats : sommes que le groupe doit payer, avec une échéance ----
 
+    // ---- Event « course au produit » : un seul à la fois, dans events/courant ----
+    // Les gradés règlent le nom et les points par unité de chaque item ; les quantités viennent du Stock.
+
+    match /events/{id} {
+      allow read: if isValide();
+      allow create, update: if isGrade()
+        && id == 'courant'
+        && request.resource.data.keys().hasOnly(['nom', 'points', 'updatedAt'])
+        && (!('nom' in request.resource.data) || shortString(request.resource.data.nom, 60))
+        && (!('points' in request.resource.data) || request.resource.data.points is map)
+        && request.resource.data.updatedAt == request.time;
+      // On vide l'event, on ne le supprime pas
+      allow delete: if false;
+    }
+
     // ---- Amendes : tout membre validé en note une, pour lui ou pour un autre ----
     // La récidive (24 h par joueur et par délit) se déduit de `date` : rien d'autre n'est stocké.
 

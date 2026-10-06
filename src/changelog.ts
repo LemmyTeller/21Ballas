@@ -8,6 +8,16 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.2.0',
+    date: '2026-10-06',
+    changements: [
+      'Nouvel onglet Event, pour la course au produit : chaque item de l’event rapporte des points par unité en stock.',
+      'Le score total se calcule tout seul à partir du Stock et suit chaque entrée en temps réel.',
+      'Les gradés choisissent les items et leurs points ; tout le monde voit le score.',
+      'Transactions : chaque ligne affiche son poids, et la transaction son poids total.',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '2026-10-05',
     changements: ['Menu : un clic sur le logo le rétracte pour gagner de la place, un autre le rouvre.'],

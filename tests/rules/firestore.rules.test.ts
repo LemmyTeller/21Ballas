@@ -733,6 +733,32 @@ describe('blanchiment', () => {
   })
 })
 
+describe('event', () => {
+  const event = (db: ReturnType<typeof dbDe>, id = 'courant') => doc(db, 'events', id)
+  const reglage = (modif: Record<string, unknown> = {}) => ({
+    nom: 'Course au produit',
+    points: { '12': 5 },
+    updatedAt: serverTimestamp(),
+    ...modif,
+  })
+
+  it('les gradés règlent l’event, tout membre validé le lit', async () => {
+    await assertSucceeds(setDoc(event(dbDe('n2')), reglage()))
+    await assertSucceeds(setDoc(event(dbDe('cache')), { points: { '13': 2 }, updatedAt: serverTimestamp() }, { merge: true }))
+    await assertSucceeds(getDoc(event(dbDe('noir'))))
+    await assertFails(getDoc(event(dbDe('attente'))))
+    await assertFails(setDoc(event(dbDe('violet')), reglage()))
+  })
+  it('un seul document, bien formé, jamais supprimé', async () => {
+    await assertFails(setDoc(event(dbDe('n1'), 'autre'), reglage()))
+    await assertFails(setDoc(event(dbDe('n1')), reglage({ points: 'beaucoup' })))
+    await assertFails(setDoc(event(dbDe('n1')), reglage({ score: 100 })))
+    await assertFails(setDoc(event(dbDe('n1')), reglage({ updatedAt: new Date(2020, 0, 1) })))
+    await setDoc(event(dbDe('n1')), reglage())
+    await assertFails(deleteDoc(event(dbDe('admin'))))
+  })
+})
+
 describe('amendes', () => {
   const amende = (par: string, modif: Record<string, unknown> = {}) => ({
     membreUid: 'noir',

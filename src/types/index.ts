@@ -85,6 +85,14 @@ export interface Amende {
   createdAt: Timestamp | null
 }
 
+// Event « course au produit » en cours (document events/courant) : les items qui comptent et ce qu'ils rapportent.
+// Les quantités ne sont pas stockées ici : elles sont lues dans le Stock.
+export interface EventCourse {
+  nom: string
+  // Points par unité, par item (clé du catalogue, voir Reference)
+  points: Record<string, number>
+}
+
 export interface Vehicule {
   id: string
   modele: string

@@ -8,7 +8,7 @@ import { ValidationModal } from '../features/commerce/ValidationModal'
 import { useLieux } from '../features/gestion/useLieux'
 import { useMembres } from '../features/members/useMembres'
 import { useArticles } from '../features/stock/useArticles'
-import { formatNombre, formatPrix } from '../lib/format'
+import { formatNombre, formatPoids, formatPrix } from '../lib/format'
 import { aAuMoins, formatDate, nomAffiche } from '../lib/roles'
 import { useReferences } from '../lib/useCatalogue'
 import type { Commande, Echange, LigneCommande, StatutCommande } from '../types'
@@ -81,6 +81,8 @@ export function Commerce() {
 
   const reference = (cle: string) => catalogue.items?.find((r) => r.cle === cle)
   const nomItem = (cle: string) => reference(cle)?.name ?? `Item ${cle}`
+  // Quantité × poids unitaire du catalogue, en kg
+  const poidsLigne = (ligne: LigneCommande) => ligne.quantite * (reference(ligne.reference)?.weight ?? 0)
   const nomMembre = (uid: string | undefined) => nomAffiche(membres.data.find((m) => m.uid === uid))
 
   const agir = (action: Promise<void>) => {
@@ -170,6 +172,7 @@ export function Commerce() {
                           Item
                         </th>
                         <th className="pb-2 text-right font-medium">Qté</th>
+                        <th className="pb-2 pl-3 text-right font-medium">Poids</th>
                         <th className="pb-2 pl-3 text-right font-medium">Propre</th>
                         <th className="pb-2 pl-3 text-right font-medium">Sale</th>
                         {enAttente && <th className="pb-2" />}
@@ -190,6 +193,9 @@ export function Commerce() {
                           </td>
                           <td className="py-2 text-right font-semibold text-zinc-100 tabular-nums">
                             {formatNombre(ligne.quantite)}
+                          </td>
+                          <td className="py-2 pl-3 text-right whitespace-nowrap text-zinc-300 tabular-nums">
+                            {formatPoids(poidsLigne(ligne))}
                           </td>
                           <td className="py-2 pl-3 text-right whitespace-nowrap text-emerald-400 tabular-nums">
                             {formatPrix(ligne.prixPropre === null ? null : ligne.quantite * ligne.prixPropre)}
@@ -221,7 +227,7 @@ export function Commerce() {
                         .filter((sens) => lignesDe(commande, sens).length > 0)
                         .map((sens) => (
                           <tr key={sens} className="font-semibold">
-                            <td colSpan={3} className="pt-2 text-xs font-normal tracking-wide text-zinc-500 uppercase">
+                            <td colSpan={4} className="pt-2 text-xs font-normal tracking-wide text-zinc-500 uppercase">
                               {sens === 'vente' ? 'À recevoir (ventes)' : 'À payer (achats)'}
                             </td>
                             <td className="pt-2 pl-3 text-right whitespace-nowrap text-emerald-400 tabular-nums">
@@ -233,6 +239,16 @@ export function Commerce() {
                             {enAttente && <td />}
                           </tr>
                         ))}
+                      {/* Poids de tous les items de la transaction, vendus et achetés confondus */}
+                      <tr className="font-semibold">
+                        <td colSpan={3} className="pt-2 text-xs font-normal tracking-wide text-zinc-500 uppercase">
+                          Poids total
+                        </td>
+                        <td className="pt-2 pl-3 text-right whitespace-nowrap text-zinc-100 tabular-nums">
+                          {formatPoids(commande.lignes.reduce((total, l) => total + poidsLigne(l), 0))}
+                        </td>
+                        <td colSpan={enAttente ? 3 : 2} />
+                      </tr>
                     </tfoot>
                   </table>
                 </div>
