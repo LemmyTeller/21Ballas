@@ -8,6 +8,14 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.3.0',
+    date: '2026-10-07',
+    changements: [
+      'Amendes : la récidive dépend de la gravité — aucune pour un délit mineur, 24 h pour un délit moyen, 7 jours pour un délit majeur.',
+      'Les récidives de délits majeurs s’affichent en rouge, sur l’accueil comme dans la grille.',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-10-06',
     changements: [

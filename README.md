@@ -149,8 +149,9 @@ Onglet **Amendes**, ouvert à tous les membres validés. Il remplace le tableau 
 
 - Collection `amendes` : joueur (`membreUid`, `membreNom`), `delit`, `date`, `note`, `creeParUid`. Aucun montant : seul le suivi des récidives compte.
 - Les 16 délits et leurs 3 catégories sont fixes, dans `src/lib/delits.ts` (liste reprise dans `firestore.rules`).
-- **Récidive** : une amende met le joueur en récidive sur ce délit pendant 24 h. Rien n'est stocké : la fin se déduit de `date`,
-  et une nouvelle amende dans le délai est affichée « Récidive » et relance 24 h.
+- **Récidive** : une amende met le joueur en récidive sur ce délit, pour une durée qui dépend de sa gravité : aucune pour un délit
+  mineur, 24 h pour un délit moyen, 7 jours pour un délit majeur (`DUREE_RECIDIVE_MS`). Rien n'est stocké : la fin se déduit de
+  `date`, et une nouvelle amende dans le délai est affichée « Récidive » et relance le délai.
 - Tout membre validé note une amende, pour lui ou pour un autre. La note se corrige, et l'amende se supprime,
   par l'auteur de la saisie, le joueur concerné ou Admin, N1, N2. Une amende ne peut pas être datée dans le futur.
 - L'accueil liste les récidives en cours, avec le temps restant.

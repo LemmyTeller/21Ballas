@@ -70,7 +70,8 @@ export interface Carjacking {
   closAt?: Timestamp | null
 }
 
-// Amende prise par un joueur. Elle ouvre 24 h de récidive pour ce joueur et ce délit (voir src/lib/delits.ts).
+// Amende prise par un joueur. Elle ouvre une récidive pour ce joueur et ce délit, dont la durée dépend de la
+// gravité du délit (voir src/lib/delits.ts).
 export interface Amende {
   id: string
   membreUid: string
@@ -78,7 +79,7 @@ export interface Amende {
   membreNom: string
   // Identifiant de la liste fixe des délits
   delit: string
-  // Moment où l'amende a été prise : c'est de là que partent les 24 h
+  // Moment où l'amende a été prise : c'est de là que part le délai de récidive
   date: Timestamp
   note: string
   creeParUid: string

@@ -10,10 +10,11 @@ export interface Delit {
   categorie: CategorieDelit
 }
 
-export const CATEGORIES_DELIT: { id: CategorieDelit; nom: string }[] = [
-  { id: 'mineur', nom: 'Délits mineurs' },
-  { id: 'moyen', nom: 'Délits moyens' },
-  { id: 'majeur', nom: 'Délits majeurs' },
+// `delai` : durée de la récidive, en clair (voir DUREE_RECIDIVE_MS)
+export const CATEGORIES_DELIT: { id: CategorieDelit; nom: string; delai: string }[] = [
+  { id: 'mineur', nom: 'Délits mineurs', delai: 'pas de récidive' },
+  { id: 'moyen', nom: 'Délits moyens', delai: 'récidive 24 h' },
+  { id: 'majeur', nom: 'Délits majeurs', delai: 'récidive 7 jours' },
 ]
 
 // Liste fixe. Les ids doivent rester alignés sur amendeValide() dans firestore.rules.
@@ -38,14 +39,27 @@ export const DELITS: Delit[] = [
 
 export const nomDelit = (id: string) => DELITS.find((d) => d.id === id)?.nom ?? id
 
-// Après une amende, le joueur est en récidive sur ce délit pendant ce délai
-export const DUREE_RECIDIVE_MS = 24 * 3_600_000
+export const categorieDelit = (id: string) => DELITS.find((d) => d.id === id)?.categorie
 
-export const finRecidive = (amende: Amende) => amende.date.toMillis() + DUREE_RECIDIVE_MS
+const HEURE_MS = 3_600_000
+// Après une amende, le joueur est en récidive sur ce délit pendant un délai qui dépend de sa gravité :
+// aucun pour un délit mineur, 24 h pour un délit moyen, 7 jours pour un délit majeur.
+export const DUREE_RECIDIVE_MS: Record<CategorieDelit, number> = {
+  mineur: 0,
+  moyen: 24 * HEURE_MS,
+  majeur: 7 * 24 * HEURE_MS,
+}
+
+export const dureeRecidive = (delit: string) => {
+  const categorie = categorieDelit(delit)
+  return categorie ? DUREE_RECIDIVE_MS[categorie] : 0
+}
+
+export const finRecidive = (amende: Amende) => amende.date.toMillis() + dureeRecidive(amende.delit)
 
 export const cleRecidive = (membreUid: string, delit: string) => `${membreUid}|${delit}`
 
-// Récidives encore ouvertes : pour chaque joueur et chaque délit, la dernière amende de moins de 24 h.
+// Récidives encore ouvertes : pour chaque joueur et chaque délit, la dernière amende dont le délai court encore.
 // Rien n'est stocké : tout se déduit de la date des amendes.
 export function recidivesEnCours(amendes: Amende[], maintenant: number): Map<string, Amende> {
   const enCours = new Map<string, Amende>()
@@ -68,14 +82,16 @@ export function estRecidive(amende: Amende, amendes: Amende[]): boolean {
       a.membreUid === amende.membreUid &&
       a.delit === amende.delit &&
       a.date.toMillis() < date &&
-      a.date.toMillis() > date - DUREE_RECIDIVE_MS,
+      a.date.toMillis() > date - dureeRecidive(amende.delit),
   )
 }
 
-// « 5 h 12 », « 12 min »
+// « 6 j 5 h », « 5 h 12 », « 12 min »
 export function formatRestant(ms: number): string {
   const minutes = Math.max(1, Math.ceil(ms / 60_000))
-  const h = Math.floor(minutes / 60)
+  const jours = Math.floor(minutes / 1440)
+  const h = Math.floor((minutes % 1440) / 60)
   const min = minutes % 60
+  if (jours > 0) return `${jours} j ${h} h`
   return h > 0 ? `${h} h ${String(min).padStart(2, '0')}` : `${min} min`
 }

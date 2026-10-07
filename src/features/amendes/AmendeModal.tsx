@@ -1,7 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
-import { CATEGORIES_DELIT, DELITS, cleRecidive, finRecidive, formatRestant, nomDelit } from '../../lib/delits'
+import {
+  CATEGORIES_DELIT,
+  DELITS,
+  categorieDelit,
+  cleRecidive,
+  finRecidive,
+  formatRestant,
+  nomDelit,
+} from '../../lib/delits'
 import { nomAffiche } from '../../lib/roles'
 import type { Amende, Membre } from '../../types'
 import { creerAmende, majAmende, supprimerAmende } from './api'
@@ -108,10 +116,14 @@ export function AmendeModal({
                 ))}
               </select>
             </label>
-            {enCours && (
+            {enCours ? (
               <p className="rounded-md border border-amber-800 bg-amber-950 px-3 py-2 text-sm text-amber-100">
                 Déjà en récidive sur ce délit (encore {formatRestant(finRecidive(enCours) - maintenant)}) : cette amende
-                sera notée « Récidive » et relance 24 h.
+                sera notée « Récidive » et relance le délai.
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-500 first-letter:uppercase">
+                {CATEGORIES_DELIT.find((c) => c.id === categorieDelit(delit))?.delai}.
               </p>
             )}
           </>

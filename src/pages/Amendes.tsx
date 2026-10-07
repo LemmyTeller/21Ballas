@@ -57,7 +57,8 @@ export function Amendes() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-50">Amendes</h1>
           <p className="text-sm text-zinc-400">
-            Après une amende, le joueur est en récidive sur ce délit pendant 24 h.
+            Après une amende, le joueur est en récidive sur ce délit : 24 h pour un délit moyen, 7 jours pour un délit
+            majeur, jamais pour un délit mineur.
           </p>
         </div>
         <Button onClick={() => setSaisie({})}>+ Amende</Button>
@@ -88,6 +89,7 @@ export function Amendes() {
                         className="border border-zinc-800 bg-purple-900/60 px-2 py-1.5 text-sm font-semibold text-purple-50"
                       >
                         {c.nom}
+                        <span className="block text-xs font-normal text-purple-200/70">{c.delai}</span>
                       </th>
                     ))}
                     <th />
@@ -129,7 +131,9 @@ export function Amendes() {
                               }
                               className={`block h-9 w-full font-semibold tabular-nums transition-colors ${
                                 fin
-                                  ? 'bg-purple-700 text-white hover:bg-purple-600'
+                                  ? d.categorie === 'majeur'
+                                    ? 'bg-red-800 text-white hover:bg-red-700'
+                                    : 'bg-purple-700 text-white hover:bg-purple-600'
                                   : 'text-transparent hover:bg-zinc-800 hover:text-zinc-500'
                               }`}
                               onClick={() => setSaisie({ initial: { membreUid: m.uid, delit: d.id } })}
@@ -148,7 +152,8 @@ export function Amendes() {
               </table>
             </div>
             <p className="mt-3 text-xs text-zinc-500">
-              Case mauve : récidive en cours, avec le temps restant. Clique une case pour noter une amende.
+              Case colorée : récidive en cours, avec le temps restant (mauve : délit moyen ; rouge : délit majeur).
+              Clique une case pour noter une amende.
             </p>
           </Card>
 

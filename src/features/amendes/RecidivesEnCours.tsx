@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Card, Chargement, ErrorMessage } from '../../components/ui'
-import { finRecidive, formatRestant, nomDelit, recidivesEnCours } from '../../lib/delits'
+import { categorieDelit, finRecidive, formatRestant, nomDelit, recidivesEnCours } from '../../lib/delits'
 import { useMaintenant } from '../../lib/presence'
 import { useAmendes } from './useAmendes'
 
@@ -38,7 +38,12 @@ export function RecidivesEnCours() {
                 <span className="font-semibold text-zinc-100">{amende.membreNom}</span>
                 <span className="text-zinc-500"> · {nomDelit(amende.delit)}</span>
               </span>
-              <span className="font-medium whitespace-nowrap text-amber-300 tabular-nums">
+              {/* Rouge pour un délit majeur : sa récidive dure 7 jours */}
+              <span
+                className={`font-medium whitespace-nowrap tabular-nums ${
+                  categorieDelit(amende.delit) === 'majeur' ? 'text-red-400' : 'text-amber-300'
+                }`}
+              >
                 {formatRestant(finRecidive(amende) - maintenant)}
               </span>
             </li>
