@@ -68,6 +68,8 @@ export function Blanchiment() {
   const membres = useMembres()
   const maintenant = useHorloge()
   const [recherche, setRecherche] = useState('')
+  // Tri du tableau des autres commerces par zip ; null : rangés par groupe
+  const [triZip, setTriZip] = useState<'asc' | 'desc' | null>(null)
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
@@ -89,8 +91,10 @@ export function Blanchiment() {
     .filter(({ commerce: c, groupe }) =>
       `${c.zip} ${c.nom} ${c.description} ${groupe?.nom ?? 'inconnu'}`.toLocaleLowerCase('fr').includes(terme),
     )
-    // Par groupe (Cartel d'abord, puis alphabétique), les propriétaires inconnus à la fin ; puis par zip
+    // Par zip si la colonne est triée. Sinon par groupe (Cartel d'abord, puis alphabétique), les propriétaires
+    // inconnus à la fin ; puis par zip.
     .sort((a, b) => {
+      if (triZip) return triZip === 'asc' ? parZip(a.commerce, b.commerce) : parZip(b.commerce, a.commerce)
       if (a.groupe && b.groupe) return comparerPartenaires(a.groupe, b.groupe) || parZip(a.commerce, b.commerce)
       if (a.groupe || b.groupe) return a.groupe ? -1 : 1
       return parZip(a.commerce, b.commerce)
@@ -267,7 +271,26 @@ export function Blanchiment() {
                     <thead className="text-xs tracking-wide text-zinc-500 uppercase">
                       <tr>
                         <th className="pb-2 font-medium">Groupe</th>
-                        <th className="pb-2 font-medium">Zip</th>
+                        <th
+                          className="pb-2 font-medium"
+                          aria-sort={triZip === 'asc' ? 'ascending' : triZip === 'desc' ? 'descending' : 'none'}
+                        >
+                          {/* Un clic : croissant ; deux : décroissant ; trois : retour au rangement par groupe */}
+                          <button
+                            type="button"
+                            title={
+                              triZip === 'asc'
+                                ? 'Zip croissant — cliquer pour décroissant'
+                                : triZip === 'desc'
+                                  ? 'Zip décroissant — cliquer pour ranger par groupe'
+                                  : 'Trier par zip'
+                            }
+                            className={`tracking-wide uppercase hover:text-purple-300 ${triZip ? 'text-purple-300' : ''}`}
+                            onClick={() => setTriZip(triZip === null ? 'asc' : triZip === 'asc' ? 'desc' : null)}
+                          >
+                            Zip {triZip === 'asc' ? '▲' : triZip === 'desc' ? '▼' : '↕'}
+                          </button>
+                        </th>
                         <th className="pb-2 font-medium">Commerce</th>
                         <th className="pb-2 font-medium">Type</th>
                         <th className="pb-2 text-right font-medium">Taux</th>

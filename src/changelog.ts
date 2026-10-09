@@ -8,6 +8,13 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.4.0',
+    date: '2026-10-09',
+    changements: [
+      'Blanchiment : le tableau « Autres commerces » se trie par zip, croissant ou décroissant, d’un clic sur l’en-tête.',
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-10-07',
     changements: [
