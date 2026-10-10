@@ -75,14 +75,16 @@ export function Accueil() {
 
   // Colonne de grille d'un emplacement ; pour deux encarts l'un sur l'autre, le plus large des deux l'emporte
   const ORDRE: Largeur[] = ['etroit', 'moyen', 'large', 'auto']
+  const VIDE = 'minmax(0,1fr)'
   const colonne = (...emplacements: number[]) => {
     const rangs = emplacements.map((i) => ORDRE.indexOf(largeurs[disposition[i]]))
     return LARGEURS[ORDRE[Math.max(...rangs)]].colonne
   }
   // Variables lues par les classes de grille : elles ne s'appliquent que sur grand écran, où les encarts sont côte à côte
   const colonnes = {
-    '--haut': `${colonne(0)} ${colonne(1)} ${colonne(2)}`,
-    '--bas': `${colonne(3)} ${colonne(8, 4, 5)} ${colonne(7, 6)}`,
+    // `VIDE` : colonne sans encart, qui prend la largeur restante et sépare les encarts de gauche de ceux de droite
+    '--haut': `${colonne(0)} ${colonne(1)} ${VIDE} ${colonne(2)}`,
+    '--bas': `${colonne(3)} ${VIDE} ${colonne(8, 4, 5)} ${colonne(7, 6)}`,
     '--bas-2': `${colonne(3)} ${colonne(8, 4, 5)}`,
   } as CSSProperties
 
@@ -168,16 +170,20 @@ export function Accueil() {
               </button>
             )}
           </div>
-          {/* Rangée du haut : trois emplacements, chacun de la largeur de l'encart qu'il porte */}
+          {/* Rangée du haut : trois emplacements, chacun de la largeur de l'encart qu'il porte, et une colonne vide
+              avant le dernier, qui le cale à droite */}
           <div className="grid items-start gap-6 lg:grid-cols-(--haut)">
             {emplacement(0)}
             {emplacement(1)}
+            <div aria-hidden="true" className="hidden lg:block" />
             {emplacement(2)}
           </div>
-          {/* Rangée du bas, calée en bas de page : trois colonnes, les deux dernières portant chacune deux encarts
-              l'un sur l'autre. Sur écran moyen, la troisième passe à la ligne. */}
+          {/* Rangée du bas, calée en bas de page : un emplacement à gauche, puis deux colonnes d'encarts empilés.
+              Sur écran moyen, la troisième passe à la ligne. */}
           <div className="mt-auto grid items-end gap-6 lg:grid-cols-(--bas-2) xl:grid-cols-(--bas)">
             {emplacement(3)}
+            {/* La colonne vide n'existe que sur grand écran, quand les trois colonnes tiennent côte à côte */}
+            <div aria-hidden="true" className="hidden xl:block" />
             <div className="flex min-w-0 flex-col gap-6">
               {emplacement(8)}
               {emplacement(4)}

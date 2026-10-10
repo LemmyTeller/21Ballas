@@ -165,6 +165,10 @@ Onglet **Map**, ouvert à tous les membres validés : la carte du serveur (avec 
   **À lancer avant un build sur une machine neuve**, et à chaque changement de carte. Affichage avec Leaflet, en repère image.
 - **Points** (`pointsCarte`) : commerce (avec appartenance), plan de récolte, point d'intérêt, danger. Position en fraction de la
   carte (0 à 1). Tout membre validé pose un point ; l'auteur et Admin, N1, N2 le modifient, le déplacent et le suppriment.
+- **Commerce et Blanchiment** : un point de type commerce se rattache à une fiche de l'onglet Blanchiment (`commerceId`),
+  une fiche ne se posant qu'une fois. Le nom, le zip et le propriétaire affichés sont alors ceux de la fiche, relus en direct ;
+  `nom` et `proprietaireId` du point n'en gardent qu'une copie, utilisée si la fiche est supprimée. « Autre commerce » reste
+  possible pour un commerce non recensé. Couleurs : les nôtres en mauve, un groupe à sa couleur de l'Annuaire, inconnu en gris.
 - **Plan de récolte** : posé avec une quantité, il passe par Germination, Croissance et Floraison, 30 minutes chacune
   (`DUREE_ETAPE_MS`). Après Germination et Croissance il faut l'arroser pour lancer l'étape suivante, dont le chrono part à
   l'arrosage ; après Floraison il est prêt, et « Récolté » le supprime. Arroser et récolter sont ouverts à tous.

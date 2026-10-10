@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import { ETAPE_LABELS, TETES_PAR_PLANT, etatPlan, typePoint } from '../../lib/carte'
-import { formatNombre, formatRestant } from '../../lib/format'
-import type { Article, Lieu, PointCarte } from '../../types'
+import { formatNombre, formatPrix, formatRestant } from '../../lib/format'
+import type { Article, CommerceVille, Lieu, PointCarte } from '../../types'
+import { GENRE_LABELS, formatDuree, genreCommerce } from '../blanchiment/api'
 import { arroserPlan, recolterPlan, supprimerPoint } from './api'
 
 // Fiche d'un point, ouverte en cliquant son marqueur : ce qu'on en sait et ce qu'on peut en faire.
 // Arroser et récolter un plan sont ouverts à tous ; modifier, déplacer et supprimer à l'auteur et aux gradés.
 export function FichePoint({
   point,
+  titre,
+  commerce,
   maintenant,
   appartenance,
   auteur,
@@ -24,6 +27,10 @@ export function FichePoint({
   lieux: Lieu[]
   articles: Article[]
   point: PointCarte
+  // Nom affiché du point (celui de la fiche du Blanchiment pour un commerce rattaché)
+  titre: string
+  // Fiche du Blanchiment à laquelle un commerce est rattaché
+  commerce?: CommerceVille
   maintenant: number
   // Nom du propriétaire d'un commerce, déjà résolu
   appartenance: string
@@ -52,10 +59,25 @@ export function FichePoint({
   }
 
   return (
-    <Modal title={point.nom || typePoint(point.type).nom} onClose={onClose}>
+    <Modal title={titre || typePoint(point.type).nom} onClose={onClose}>
       <dl className="space-y-1.5 text-sm">
         <Ligne titre="Type">{typePoint(point.type).nom}</Ligne>
         {point.type === 'commerce' && <Ligne titre="Appartenance">{appartenance}</Ligne>}
+        {/* Commerce rattaché à l'onglet Blanchiment : ce qu'on y sait de lui */}
+        {commerce && (
+          <>
+            <Ligne titre="Zip">
+              <span className="font-semibold tabular-nums">{commerce.zip}</span>
+            </Ligne>
+            <Ligne titre="Blanchiment">
+              {GENRE_LABELS[genreCommerce(commerce)]}
+              {commerce.taux !== null && ` · ${commerce.taux} % récupérés`}
+              {commerce.dureeMinutes !== null && ` · ${formatDuree(commerce.dureeMinutes)}`}
+              {commerce.montantMax != null && ` · max ${formatPrix(commerce.montantMax)}`}
+            </Ligne>
+            {commerce.description && <Ligne titre="Description">{commerce.description}</Ligne>}
+          </>
+        )}
         {plan && point.etape && (
           <>
             <Ligne titre="Quantité">{formatNombre(point.quantite ?? 0)} plants</Ligne>

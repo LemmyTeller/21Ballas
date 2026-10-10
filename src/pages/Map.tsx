@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useMembre } from '../auth/AuthContext'
 import { Button, Card, Chargement, ErrorMessage } from '../components/ui'
-import { PROPRIETAIRE_NOUS } from '../features/blanchiment/api'
+import { PROPRIETAIRE_NOUS, nomCommerce } from '../features/blanchiment/api'
+import { useCommerces } from '../features/blanchiment/useCommerces'
 import { deplacerPoint } from '../features/carte/api'
 import { Carte, type Marqueur } from '../features/carte/Carte'
 import { FichePoint } from '../features/carte/FichePoint'
@@ -28,6 +29,8 @@ export function MapPage() {
   const points = usePoints()
   const partenaires = usePartenaires()
   const membres = useMembres()
+  // Commerces recensés dans l'onglet Blanchiment : un point de type commerce peut y être rattaché
+  const commerces = useCommerces()
   // Stock : un plan y prend ses graines à la plantation et y rend ses têtes à la récolte
   const lieux = useLieux()
   const articles = useArticles()
@@ -44,10 +47,21 @@ export function MapPage() {
     () => partenaires.data.filter((p) => p.type !== 'pm').sort(comparerPartenaires),
     [partenaires.data],
   )
+  // Un commerce rattaché à l'onglet Blanchiment en prend le nom et le propriétaire ; sinon ceux saisis sur le point
+  const commerceDe = (point: PointCarte) =>
+    point.commerceId ? commerces.data.find((c) => c.id === point.commerceId) : undefined
+  const proprietaireDe = (point: PointCarte) => {
+    const commerce = commerceDe(point)
+    return commerce ? commerce.proprietaireId : point.proprietaireId
+  }
+  const nomDe = (point: PointCarte) => {
+    const commerce = commerceDe(point)
+    return commerce ? nomCommerce(commerce) : point.nom
+  }
   const appartenance = (point: PointCarte) =>
-    point.proprietaireId === PROPRIETAIRE_NOUS
+    proprietaireDe(point) === PROPRIETAIRE_NOUS
       ? 'Ballas'
-      : (partenaires.data.find((p) => p.id === point.proprietaireId)?.nom ?? 'Inconnue')
+      : (partenaires.data.find((p) => p.id === proprietaireDe(point))?.nom ?? 'Inconnue')
 
   // Les plans à récolter d'abord, puis ceux à arroser, puis ceux en pousse du plus avancé au moins avancé
   const ORDRE_ETATS = ['pret', 'arroser', 'pousse']
@@ -77,16 +91,24 @@ export function MapPage() {
               accent: base.accent || plan.etat !== 'pousse',
             }
           }
-          // Un commerce prend la couleur de son groupe ; les nôtres et les inconnus gardent celle du type
-          const groupe = p.type === 'commerce' ? partenaires.data.find((g) => g.id === p.proprietaireId) : undefined
-          return {
-            ...base,
-            couleur: groupe ? (groupe.couleur ?? COULEUR_DEFAUT) : typePoint(p.type).couleur,
-            titre: p.nom,
-            etiquette: '',
+          if (p.type === 'commerce') {
+            // Les nôtres en mauve Ballas, ceux d'un groupe à sa couleur de l'Annuaire, les inconnus en gris
+            const commerce = p.commerceId ? commerces.data.find((c) => c.id === p.commerceId) : undefined
+            const proprietaireId = commerce ? commerce.proprietaireId : p.proprietaireId
+            const groupe = partenaires.data.find((g) => g.id === proprietaireId)
+            const nous = proprietaireId === PROPRIETAIRE_NOUS
+            const nom = commerce ? nomCommerce(commerce) : p.nom
+            return {
+              ...base,
+              couleur: nous ? typePoint('commerce').couleur : (groupe?.couleur ?? COULEUR_DEFAUT),
+              titre: `${nom} — ${nous ? 'Ballas' : (groupe?.nom ?? 'propriétaire inconnu')}`,
+              // Le zip d'un commerce recensé dans le Blanchiment
+              etiquette: commerce?.zip ?? '',
+            }
           }
+          return { ...base, couleur: typePoint(p.type).couleur, titre: p.nom, etiquette: '' }
         }),
-    [points.data, partenaires.data, masques, maintenant, deplace],
+    [points.data, partenaires.data, commerces.data, masques, maintenant, deplace],
   )
 
   function clicCarte(position: { x: number; y: number }) {
@@ -124,10 +146,16 @@ export function MapPage() {
       </header>
 
       <ErrorMessage>
-        {points.error ?? partenaires.error ?? membres.error ?? lieux.error ?? articles.error ?? erreurAction}
+        {points.error ??
+          partenaires.error ??
+          membres.error ??
+          commerces.error ??
+          lieux.error ??
+          articles.error ??
+          erreurAction}
       </ErrorMessage>
 
-      {points.loading || partenaires.loading || lieux.loading || articles.loading ? (
+      {points.loading || partenaires.loading || commerces.loading || lieux.loading || articles.loading ? (
         <Chargement />
       ) : (
         <>
@@ -214,6 +242,8 @@ export function MapPage() {
       {fiche && (
         <FichePoint
           point={fiche}
+          titre={nomDe(fiche)}
+          commerce={commerceDe(fiche)}
           maintenant={maintenant}
           appartenance={appartenance(fiche)}
           auteur={nomAffiche(membres.data.find((m) => m.uid === fiche.creeParUid))}
@@ -237,6 +267,8 @@ export function MapPage() {
           point={'point' in fenetre ? fenetre.point : undefined}
           position={'position' in fenetre ? fenetre.position : undefined}
           partenaires={organisations}
+          commerces={commerces.data}
+          commercesPlaces={points.data.flatMap((p) => (p.commerceId ? [p.commerceId] : []))}
           lieux={lieux.data}
           articles={articles.data}
           auteurUid={moi.uid}

@@ -30,7 +30,8 @@ const LIENS: { to: string; label: string; minimum: Role; admin?: boolean }[] = [
 
 // Pages en grille de cartes, plus larges que les pages de tableaux
 const LARGEURS: Record<string, string> = {
-  '/': 'max-w-7xl',
+  // L'accueil porte beaucoup d'encarts : il s'étale presque sur toute la largeur de l'écran
+  '/': 'max-w-[120rem]',
   '/tarifs': 'max-w-7xl',
   '/transactions': 'max-w-7xl',
   '/annuaire': 'max-w-7xl',

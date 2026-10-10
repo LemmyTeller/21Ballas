@@ -102,11 +102,12 @@ export const LARGEURS = {
 export type Largeur = keyof typeof LARGEURS
 
 // La largeur suit l'encart quand il change de place
+// Les encarts de gauche ont une largeur fixe : l'espace gagné reste libre au milieu de la page
 const LARGEURS_DEFAUT: Record<Encart, Largeur> = {
-  taches: 'auto',
-  annonces: 'auto',
+  taches: 'moyen',
+  annonces: 'moyen',
   presents: 'etroit',
-  saisie: 'auto',
+  saisie: 'large',
   recidives: 'etroit',
   blanchiment: 'etroit',
   contrats: 'etroit',

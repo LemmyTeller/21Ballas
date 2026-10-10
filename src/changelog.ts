@@ -8,6 +8,16 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.7.0',
+    date: '2026-10-10',
+    changements: [
+      'Map : un commerce se pose en choisissant une fiche de l’onglet Blanchiment ; il affiche son zip et suit son nom et son propriétaire.',
+      'Nos commerces sont en mauve, ceux des autres groupes à leur couleur, les propriétaires inconnus en gris.',
+      'La fiche d’un commerce sur la carte rappelle son type, son taux, sa durée et son plafond de blanchiment.',
+      'Accueil : la page occupe presque toute la largeur de l’écran, avec les encarts de saisie à gauche, les encarts de suivi à droite et un espace libre entre les deux.',
+    ],
+  },
+  {
     version: '1.6.0',
     date: '2026-10-10',
     changements: [

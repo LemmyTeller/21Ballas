@@ -19,6 +19,8 @@ export interface PointSaisie {
   nom: string
   commentaire: string
   proprietaireId: string | null
+  // Commerce du Blanchiment auquel le point est rattaché, ou null
+  commerceId: string | null
   quantite: number | null
 }
 
@@ -27,6 +29,7 @@ const champs = (type: TypePoint, saisie: PointSaisie) => ({
   nom: type === 'plan' ? '' : saisie.nom.trim(),
   commentaire: saisie.commentaire.trim(),
   proprietaireId: type === 'commerce' ? saisie.proprietaireId : null,
+  commerceId: type === 'commerce' ? saisie.commerceId : null,
   quantite: type === 'plan' ? saisie.quantite : null,
 })
 

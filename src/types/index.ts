@@ -101,6 +101,10 @@ export interface PointCarte {
   commentaire: string
   // Commerce : 'ballas', id d'un partenaire, ou null si le propriétaire est inconnu
   proprietaireId: string | null
+  // Commerce recensé dans l'onglet Blanchiment auquel ce point correspond ; absent ou null : commerce saisi librement.
+  // Quand il est renseigné, le nom, le zip et l'appartenance affichés sont ceux de la fiche du Blanchiment ;
+  // `nom` et `proprietaireId` n'en gardent qu'une copie, au cas où cette fiche serait supprimée.
+  commerceId?: string | null
   // Plan de récolte : nombre de plants, étape de pousse en cours et moment où elle a commencé
   quantite: number | null
   etape: EtapePlan | null

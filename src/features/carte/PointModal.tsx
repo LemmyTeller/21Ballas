@@ -3,21 +3,29 @@ import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
 import { REFERENCE_GRAINE, TETES_PAR_PLANT, TYPES_POINT, typePoint } from '../../lib/carte'
 import { formatNombre } from '../../lib/format'
-import type { Article, Lieu, Partenaire, PointCarte, TypePoint } from '../../types'
-import { PROPRIETAIRE_NOUS } from '../blanchiment/api'
+import type { Article, CommerceVille, Lieu, Partenaire, PointCarte, TypePoint } from '../../types'
+import { PROPRIETAIRE_NOUS, nomCommerce } from '../blanchiment/api'
 import { quantiteDans } from '../stock/useArticles'
 import { creerPoint, modifierPoint } from './api'
+
+// Valeur de la liste « Commerce » pour un commerce qui n'est pas recensé dans le Blanchiment
+const LIBRE = 'libre'
 
 // Nouveau point à la position cliquée, ou (avec `point`) modification d'un point : son type ne change pas
 export function PointModal({
   point,
   position,
   partenaires,
+  commerces,
+  commercesPlaces,
   lieux,
   articles,
   auteurUid,
   onClose,
 }: {
+  // Commerces recensés dans l'onglet Blanchiment, et ids de ceux déjà posés sur la carte
+  commerces: CommerceVille[]
+  commercesPlaces: string[]
   // Lieux de stockage et articles du Stock : un nouveau plan y prend ses graines
   lieux: Lieu[]
   articles: Article[]
@@ -40,9 +48,19 @@ export function PointModal({
   // Lieu d'où sortent les graines d'un nouveau plan ; le premier lieu (le QG) par défaut, vide : stock non touché
   const [lieuId, setLieuId] = useState(lieux[0]?.id ?? '')
 
+  // Commerce : rattaché à une fiche du Blanchiment (son id), saisi librement (LIBRE), ou pas encore choisi ('')
+  const [lien, setLien] = useState(point ? (point.commerceId ?? LIBRE) : '')
+  // Un commerce ne se pose qu'une fois : on ne propose que ceux qui ne sont pas encore sur la carte
+  const disponibles = commerces
+    .filter((c) => c.id === point?.commerceId || !commercesPlaces.includes(c.id))
+    .sort((a, b) => a.zip.localeCompare(b.zip, 'fr', { numeric: true }))
+  const commerceLie = commerces.find((c) => c.id === lien)
+  const nomProprietaire = (id: string | null) =>
+    id === PROPRIETAIRE_NOUS ? 'Ballas' : (partenaires.find((p) => p.id === id)?.nom ?? 'inconnu')
+
   const plan = type === 'plan'
   const plants = Math.max(0, Math.trunc(Number(quantite)))
-  const valide = plan ? plants >= 1 : nom.trim() !== ''
+  const valide = plan ? plants >= 1 : type === 'commerce' && lien !== LIBRE ? commerceLie !== undefined : nom.trim() !== ''
   const articleGraine = articles.find((a) => a.id === REFERENCE_GRAINE)
   const graines = articleGraine && lieuId ? quantiteDans(articleGraine, lieuId) : 0
 
@@ -50,9 +68,11 @@ export function PointModal({
     e.preventDefault()
     if (!valide) return
     const saisie = {
-      nom,
+      // Rattaché à une fiche du Blanchiment : on garde une copie de son nom et de son propriétaire
+      nom: commerceLie ? nomCommerce(commerceLie).slice(0, 60) : nom,
       commentaire,
-      proprietaireId: proprietaireId || null,
+      proprietaireId: commerceLie ? commerceLie.proprietaireId : proprietaireId || null,
+      commerceId: commerceLie?.id ?? null,
       quantite: plan ? plants : null,
     }
     setEnvoi(true)
@@ -108,20 +128,54 @@ export function PointModal({
             />
           </label>
         ) : (
-          <label className="block space-y-1 text-sm">
-            <span className="text-zinc-400">Nom</span>
-            <input
-              className={inputClass}
-              value={nom}
-              maxLength={60}
-              required
-              autoFocus
-              onChange={(e) => setNom(e.target.value)}
-            />
-          </label>
+          <>
+            {type === 'commerce' && (
+              <label className="block space-y-1 text-sm">
+                <span className="text-zinc-400">Commerce</span>
+                <select className={inputClass} value={lien} required onChange={(e) => setLien(e.target.value)}>
+                  <option value="" disabled>
+                    Choisir un commerce recensé dans Blanchiment…
+                  </option>
+                  {[
+                    { titre: 'Nos commerces', liste: disponibles.filter((c) => c.proprietaireId === PROPRIETAIRE_NOUS) },
+                    { titre: 'Autres commerces', liste: disponibles.filter((c) => c.proprietaireId !== PROPRIETAIRE_NOUS) },
+                  ]
+                    .filter((groupe) => groupe.liste.length > 0)
+                    .map((groupe) => (
+                      <optgroup key={groupe.titre} label={groupe.titre}>
+                        {groupe.liste.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.zip} — {nomCommerce(c)} ({nomProprietaire(c.proprietaireId)})
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  <option value={LIBRE}>Autre commerce (saisie libre)</option>
+                </select>
+              </label>
+            )}
+            {type === 'commerce' && commerceLie && (
+              <p className="text-xs text-zinc-500">
+                Le nom, le zip et l’appartenance du point suivront la fiche de ce commerce dans l’onglet Blanchiment.
+              </p>
+            )}
+            {(type !== 'commerce' || lien === LIBRE) && (
+              <label className="block space-y-1 text-sm">
+                <span className="text-zinc-400">Nom</span>
+                <input
+                  className={inputClass}
+                  value={nom}
+                  maxLength={60}
+                  required
+                  autoFocus
+                  onChange={(e) => setNom(e.target.value)}
+                />
+              </label>
+            )}
+          </>
         )}
 
-        {type === 'commerce' && (
+        {type === 'commerce' && lien === LIBRE && (
           <label className="block space-y-1 text-sm">
             <span className="text-zinc-400">Appartenance</span>
             <select className={inputClass} value={proprietaireId} onChange={(e) => setProprietaireId(e.target.value)}>

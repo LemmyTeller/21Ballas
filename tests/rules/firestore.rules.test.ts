@@ -781,6 +781,15 @@ describe('map : points de la carte', () => {
     await assertFails(setDoc(ref('noir', 'g'), point('noir', { type: 'tresor' })))
     await assertFails(setDoc(ref('noir', 'h'), point('noir', { quantite: 3 })))
   })
+  it('seul un commerce se rattache à une fiche du Blanchiment', async () => {
+    await assertSucceeds(setDoc(ref('noir', 'a'), point('noir', { type: 'commerce', commerceId: 'c1' })))
+    await assertSucceeds(setDoc(ref('noir', 'b'), point('noir', { type: 'commerce', commerceId: null })))
+    await assertFails(setDoc(ref('noir', 'c'), point('noir', { commerceId: 'c1' })))
+    await assertFails(setDoc(ref('noir', 'd'), point('noir', { type: 'commerce', commerceId: 12 })))
+    // Le rattachement d'un point existant : par son auteur
+    await assertFails(updateDoc(ref('noir', 'p1'), { commerceId: null, updatedAt: serverTimestamp() }))
+    await assertSucceeds(updateDoc(ref('violet', 'p1'), { commerceId: null, updatedAt: serverTimestamp() }))
+  })
   it('un plan naît en germination, à l’heure du serveur', async () => {
     await assertFails(setDoc(ref('noir', 'a'), plan('noir', { etape: 'floraison' })))
     await assertFails(setDoc(ref('noir', 'b'), plan('noir', { etapeDebut: new Date(Date.now() - 3_600_000) })))

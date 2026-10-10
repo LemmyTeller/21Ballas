@@ -122,8 +122,8 @@ service cloud.firestore {
     // Les types doivent rester alignés sur TYPES_POINT dans src/lib/carte.ts
     function pointValide(data) {
       return data.keys().hasOnly(
-               ['type', 'x', 'y', 'nom', 'commentaire', 'proprietaireId', 'quantite', 'etape', 'etapeDebut',
-                'creeParUid', 'createdAt', 'updatedAt'])
+               ['type', 'x', 'y', 'nom', 'commentaire', 'proprietaireId', 'commerceId', 'quantite', 'etape',
+                'etapeDebut', 'creeParUid', 'createdAt', 'updatedAt'])
         && data.keys().hasAll(
                ['type', 'x', 'y', 'nom', 'commentaire', 'proprietaireId', 'quantite', 'etape', 'etapeDebut',
                 'creeParUid', 'createdAt', 'updatedAt'])
@@ -134,6 +134,10 @@ service cloud.firestore {
         && shortString(data.nom, 60)
         && shortString(data.commentaire, 300)
         && (data.proprietaireId == null || data.proprietaireId is string)
+        // Rattachement à un commerce de l'onglet Blanchiment : facultatif, pour un point de type commerce
+        && (!('commerceId' in data)
+            || data.commerceId == null
+            || (data.type == 'commerce' && shortString(data.commerceId, 60)))
         // Quantité et étape de pousse : pour un plan de récolte seulement
         && (
           data.type == 'plan'
@@ -634,7 +638,7 @@ service cloud.firestore {
           (
             (isGrade() || resource.data.creeParUid == request.auth.uid)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-                 ['x', 'y', 'nom', 'commentaire', 'proprietaireId', 'quantite', 'updatedAt'])
+                 ['x', 'y', 'nom', 'commentaire', 'proprietaireId', 'commerceId', 'quantite', 'updatedAt'])
           )
           // Arrosage : uniquement l'étape suivante, une fois les 30 minutes de l'étape en cours écoulées
           // (durée alignée sur DUREE_ETAPE_MS dans src/lib/carte.ts)
