@@ -4,6 +4,7 @@ import { useMembre } from '../auth/AuthContext'
 import { Button, Card, Chargement, ErrorMessage } from '../components/ui'
 import { annulerLot, supprimerCaisses } from '../features/biz/api'
 import { CaisseModal } from '../features/biz/CaisseModal'
+import { Graph } from '../features/biz/Graph'
 import { useCaisses, useRecoltes, useTransformations } from '../features/biz/hooks'
 import { LotModal } from '../features/biz/LotModal'
 import { usePoints } from '../features/carte/usePoints'
@@ -16,7 +17,7 @@ import { GRAINES_PAR_CAISSE, REFERENCE_POCHON, TETES_PAR_POCHON, finLot, pochons
 import { REFERENCE_GRAINE, REFERENCE_TETE, TETES_PAR_PLANT, etatPlan } from '../lib/carte'
 import { formatNombre, formatPrix, formatRestant } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
-import { aAuMoins, formatDate, nomAffiche } from '../lib/roles'
+import { aAuMoins, aLeDroitAdmin, formatDate, nomAffiche } from '../lib/roles'
 import type { Caisse, Transformation } from '../types'
 
 const SEMAINE_MS = 7 * 24 * 3_600_000
@@ -41,6 +42,8 @@ export function Bizness() {
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
   const estGrade = aAuMoins(moi, 'n2')
+  const estAdmin = aLeDroitAdmin(moi)
+  const [vue, setVue] = useState<'pilotage' | 'graph'>('pilotage')
 
   const chargement =
     caisses.loading || lots.loading || recoltes.loading || points.loading || articles.loading || lieux.loading
@@ -132,18 +135,40 @@ export function Bizness() {
 
   return (
     <>
-      <header>
-        <h1 className="text-2xl font-bold text-zinc-50">Bizne$$</h1>
-        <p className="text-sm text-zinc-400">
-          Une caisse donne {GRAINES_PAR_CAISSE} graines, un plant {TETES_PAR_PLANT} têtes, {TETES_PAR_POCHON} têtes un
-          pochon.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-50">Bizne$$</h1>
+          <p className="text-sm text-zinc-400">
+            Une caisse donne {GRAINES_PAR_CAISSE} graines, un plant {TETES_PAR_PLANT} têtes, {TETES_PAR_POCHON} têtes un
+            pochon.
+          </p>
+        </div>
+        {/* Le suivi chiffré est un outil d'admin : les autres membres ne voient pas ces onglets */}
+        {estAdmin && (
+          <div className="flex rounded-lg border border-zinc-800 p-0.5">
+            {(['pilotage', 'graph'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={vue === v}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  vue === v ? 'bg-purple-800 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                }`}
+                onClick={() => setVue(v)}
+              >
+                {v === 'pilotage' ? 'Pilotage' : 'Graph'}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       <ErrorMessage>{erreur ?? erreurAction}</ErrorMessage>
 
       {chargement ? (
         <Chargement />
+      ) : estAdmin && vue === 'graph' ? (
+        <Graph caisses={caisses.data} lots={lots.data} recoltes={recoltes.data} maintenant={maintenant} />
       ) : (
         <>
           {/* La chaîne, étape par étape */}

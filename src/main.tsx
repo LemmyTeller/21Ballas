@@ -51,6 +51,42 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('apercu') ==
       </div>,
     )
   afficher(false)
+} else if (import.meta.env.DEV && new URLSearchParams(location.search).get('apercu') === 'graphiques') {
+  // Aperçu des graphiques avec des données d'exemple, en développement : http://localhost:5173/?apercu=graphiques
+  const { Colonnes } = await import('./components/Colonnes.tsx')
+  const { COULEURS_SERIES } = await import('./lib/graphiques.ts')
+  const jours = Array.from({ length: 14 }, (_, i) => `${String(i + 1).padStart(2, '0')}/10`)
+  root.render(
+    <div className="grid gap-4 p-4 xl:grid-cols-2">
+      <Colonnes
+        titre="Caisses par jour"
+        etiquettes={jours}
+        format={(v) => String(v)}
+        series={[
+          { nom: 'Récupérées', couleur: COULEURS_SERIES[0], valeurs: [3, 5, 0, 2, 6, 4, 1, 0, 3, 7, 5, 2, 4, 6] },
+          { nom: 'Perdues', couleur: COULEURS_SERIES[1], valeurs: [1, 0, 0, 2, 1, 0, 3, 0, 1, 0, 2, 1, 0, 1] },
+        ]}
+      />
+      <Colonnes
+        titre="Pochons produits par jour"
+        etiquettes={jours}
+        format={(v) => String(v)}
+        series={[
+          {
+            nom: 'Pochons produits',
+            couleur: COULEURS_SERIES[0],
+            valeurs: [120, 250, 0, 80, 500, 340, 60, 0, 150, 730, 410, 90, 220, 380],
+          },
+        ]}
+      />
+      <Colonnes
+        titre="Sans donnée"
+        etiquettes={jours}
+        format={(v) => String(v)}
+        series={[{ nom: 'Têtes', couleur: COULEURS_SERIES[0], valeurs: jours.map(() => 0) }]}
+      />
+    </div>,
+  )
 } else if (isConfigured) {
   // Import différé : Firebase ne doit pas s'initialiser sans configuration
   const { default: App } = await import('./App.tsx')

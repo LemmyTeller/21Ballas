@@ -176,6 +176,11 @@ Les chiffres du jeu sont dans `src/lib/biz.ts` et `src/lib/carte.ts`, et repris 
 - **Récoltes** : `recoltes` garde une ligne par plan récolté, écrite depuis l'onglet Map ; c'est ce qui alimente le bilan,
   puisqu'un plan récolté disparaît de la carte.
 - **Potentiel** : tout ce qui est engagé, converti en pochons, puis chiffré au meilleur prix de vente du pochon des Tarifs.
+- **Graph** (admins uniquement, sous-onglet invisible des autres) : indicateurs de la période (7, 14 ou 30 journées de jeu)
+  comparés à la période précédente, et histogrammes par jour — caisses récupérées et perdues, têtes récoltées, pochons
+  produits, pochons vendus, argent encaissé sur les ventes. Tout est calculé à l'affichage à partir de `caisses`,
+  `recoltes`, `transformations` et `commandes` ; composant `src/components/Colonnes.tsx`, aperçu sans connexion par
+  `?apercu=graphiques` (développement).
 - Tout membre validé fait tourner la chaîne ; l'auteur ou un gradé annule un lot ou supprime une commande en attente ;
   ce qui est clos ne se modifie plus.
 
