@@ -1,5 +1,4 @@
 import {
-  Timestamp,
   addDoc,
   collection,
   deleteDoc,
@@ -8,11 +7,12 @@ import {
   serverTimestamp,
   updateDoc,
   writeBatch,
+  type WriteBatch,
 } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
-import type { Article, Blanchiment, CommerceVille, GenreCommerce } from '../../types'
+import type { Article, Blanchiment, CommerceVille, GenreCommerce, OperationBlanchiment } from '../../types'
 import { REFERENCE_ARGENT_SALE } from '../commerce/api'
-import { quantiteDans } from '../stock/useArticles'
+import { varierStock } from '../stock/mouvements'
 
 // Valeur de `proprietaireId` pour un commerce qui nous appartient
 export const PROPRIETAIRE_NOUS = 'ballas'
@@ -75,47 +75,76 @@ export function formatDuree(minutes: number): string {
   return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, '0')}`
 }
 
-export interface Lancement {
-  montant: number
-  taux: number
-  dureeMinutes: number
-  // Lieu d'où sortent les billets de 1$ ; null pour ne pas toucher au stock
-  lieuId: string | null
+// ---- Compte d'un commerce : il blanchit en continu, on y ajoute du sale et on en retire du propre ----
+
+type TypeOperation = OperationBlanchiment['type']
+
+// Enregistre le nouvel état du commerce et sa ligne de journal, dans une écriture groupée.
+// `etat` : sale et propre juste après l'opération ; l'heure du relevé est celle du serveur.
+function operer(
+  batch: WriteBatch,
+  commerce: CommerceVille,
+  type: TypeOperation,
+  etat: { sale: number; propre: number },
+  montant: number | null,
+  lieuId: string | null,
+  acteurUid: string,
+) {
+  const sale = Math.max(0, Math.round(etat.sale))
+  const propre = Math.max(0, Math.round(etat.propre))
+  batch.set(doc(db, 'comptesBlanchiment', commerce.id), { sale, propre, releveAt: serverTimestamp() })
+  batch.set(doc(collection(db, 'operationsBlanchiment')), {
+    type,
+    commerceId: commerce.id,
+    commerceNom: nomCommerce(commerce),
+    montant,
+    sale,
+    propre,
+    lieuId,
+    parUid: acteurUid,
+    createdAt: serverTimestamp(),
+  })
 }
 
-// Lance un dépôt et sort les billets de 1$ du stock du lieu, dans la même écriture
-export async function lancerBlanchiment(
+// Ajoute du sale au commerce. `actuel` : son état estimé à l'instant. Avec un lieu, les billets de 1$ en sortent.
+export async function ajouterSale(
   commerce: CommerceVille,
-  lancement: Lancement,
+  actuel: { sale: number; propre: number },
+  montant: number,
+  lieuId: string | null,
   acteurUid: string,
   articles: Article[],
 ): Promise<void> {
-  const debut = Timestamp.now()
   const batch = writeBatch(db)
-
-  batch.set(doc(collection(db, 'blanchiments')), {
-    commerceId: commerce.id,
-    commerceNom: nomCommerce(commerce),
-    ...lancement,
-    debut,
-    fin: Timestamp.fromMillis(debut.toMillis() + lancement.dureeMinutes * 60_000),
-    statut: 'en_cours',
-    lanceParUid: acteurUid,
-    createdAt: serverTimestamp(),
-  })
-
-  const billets = articles.find((a) => a.id === REFERENCE_ARGENT_SALE)
-  if (lancement.lieuId && billets) {
-    // Jamais sous zéro : on ne peut pas sortir plus que ce que le lieu contient
-    const reste = Math.max(0, quantiteDans(billets, lancement.lieuId) - Math.round(lancement.montant))
-    batch.update(doc(db, 'articles', REFERENCE_ARGENT_SALE), {
-      [`quantites.${lancement.lieuId}`]: reste,
-      updatedAt: serverTimestamp(),
-    })
-  }
-
+  operer(batch, commerce, 'depot', { sale: actuel.sale + montant, propre: actuel.propre }, montant, lieuId, acteurUid)
+  if (lieuId) varierStock(batch, articles, REFERENCE_ARGENT_SALE, lieuId, -Math.round(montant))
   await batch.commit()
 }
+
+// Retire du propre du commerce : seulement noté, l'argent propre n'est pas un item du Stock
+export async function retirerPropre(
+  commerce: CommerceVille,
+  actuel: { sale: number; propre: number },
+  montant: number,
+  acteurUid: string,
+): Promise<void> {
+  const batch = writeBatch(db)
+  operer(batch, commerce, 'retrait', { sale: actuel.sale, propre: actuel.propre - montant }, montant, null, acteurUid)
+  await batch.commit()
+}
+
+// Recale le commerce sur les deux chiffres lus en jeu
+export async function releverCompte(
+  commerce: CommerceVille,
+  releve: { sale: number; propre: number },
+  acteurUid: string,
+): Promise<void> {
+  const batch = writeBatch(db)
+  operer(batch, commerce, 'releve', releve, null, null, acteurUid)
+  await batch.commit()
+}
+
+// ---- Anciens dépôts (un seul à la fois, récupéré à la fin) : plus aucun n'est lancé ----
 
 // L'argent propre est récupéré : le dépôt passe dans l'historique
 export async function recupererBlanchiment(id: string, montantRecupere: number, acteurUid: string): Promise<void> {

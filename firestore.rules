@@ -498,33 +498,53 @@ service cloud.firestore {
       allow delete: if isGrade();
     }
 
-    // Un dépôt est lancé, puis récupéré une fois le temps écoulé. Récupéré, il ne change plus (historique).
-    // Tant qu'il est en cours, un gradé peut l'annuler, ce qui le supprime.
-    match /blanchiments/{id} {
+    // Un de nos commerces blanchit en continu. Son compte garde l'état au dernier relevé (sale en attente, propre
+    // disponible, heure) ; l'appli en déduit où il en est. L'id du compte est celui du commerce.
+    match /comptesBlanchiment/{id} {
       allow read: if isValide();
+      allow create, update: if isGrade()
+        && request.resource.data.keys().hasOnly(['sale', 'propre', 'releveAt'])
+        && request.resource.data.keys().hasAll(['sale', 'propre', 'releveAt'])
+        && request.resource.data.sale is number
+        && request.resource.data.sale >= 0
+        && request.resource.data.sale <= 1000000000000
+        && request.resource.data.propre is number
+        && request.resource.data.propre >= 0
+        && request.resource.data.propre <= 1000000000000
+        && request.resource.data.releveAt == request.time;
+      allow delete: if isGrade();
+    }
 
+    // Journal des ajouts de sale, retraits de propre et relevés : en ajout seul
+    match /operationsBlanchiment/{id} {
+      allow read: if isValide();
       allow create: if isGrade()
         && request.resource.data.keys().hasOnly(
-             ['commerceId', 'commerceNom', 'montant', 'taux', 'dureeMinutes', 'debut', 'fin', 'lieuId',
-              'statut', 'lanceParUid', 'createdAt'])
+             ['type', 'commerceId', 'commerceNom', 'montant', 'sale', 'propre', 'lieuId', 'parUid', 'createdAt'])
         && request.resource.data.keys().hasAll(
-             ['commerceId', 'commerceNom', 'montant', 'taux', 'dureeMinutes', 'debut', 'fin', 'lieuId',
-              'statut', 'lanceParUid', 'createdAt'])
+             ['type', 'commerceId', 'commerceNom', 'montant', 'sale', 'propre', 'lieuId', 'parUid', 'createdAt'])
+        && request.resource.data.type in ['depot', 'retrait', 'releve']
         && request.resource.data.commerceId is string
         && shortString(request.resource.data.commerceNom, 80)
-        && request.resource.data.montant is number
-        && request.resource.data.montant > 0
-        && request.resource.data.taux is number
-        && request.resource.data.taux >= 0
-        && request.resource.data.taux <= 100
-        && request.resource.data.dureeMinutes is number
-        && request.resource.data.dureeMinutes >= 0
-        && request.resource.data.debut is timestamp
-        && request.resource.data.fin is timestamp
+        // Somme ajoutée ou retirée ; aucune pour un relevé
+        && (request.resource.data.type == 'releve'
+              ? request.resource.data.montant == null
+              : (request.resource.data.montant is number && request.resource.data.montant > 0))
+        && request.resource.data.sale is number
+        && request.resource.data.sale >= 0
+        && request.resource.data.propre is number
+        && request.resource.data.propre >= 0
         && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
-        && request.resource.data.statut == 'en_cours'
-        && request.resource.data.lanceParUid == request.auth.uid
+        && request.resource.data.parUid == request.auth.uid
         && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Anciens dépôts (un seul à la fois, récupéré à la fin) : plus aucun n'est créé. Ceux encore en cours se
+    // récupèrent ou s'annulent comme avant ; récupérés, ils ne changent plus (historique).
+    match /blanchiments/{id} {
+      allow read: if isValide();
+      allow create: if false;
 
       allow update: if isGrade()
         && resource.data.statut == 'en_cours'

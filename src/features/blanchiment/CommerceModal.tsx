@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
+import { DUREE_DEFAUT_MINUTES } from '../../lib/blanchiment'
 import type { CommerceVille, GenreCommerce, Partenaire } from '../../types'
 import { TYPES_AVEC_GRILLE, TYPE_PLURIELS, comparerPartenaires } from '../tarifs/api'
 import {
@@ -16,7 +17,7 @@ import {
 const nombreSaisi = (valeur: string) => (valeur === '' ? null : Number(valeur))
 
 // Création (sans `commerce`) ou modification d'un commerce recensé en ville.
-// `occupe` : un blanchiment y est en cours, il ne peut donc pas être supprimé.
+// `occupe` : il y reste du sale ou du propre, il ne peut donc pas être supprimé.
 export function CommerceModal({
   commerce,
   partenaires,
@@ -35,7 +36,8 @@ export function CommerceModal({
   const [proprietaireId, setProprietaireId] = useState(commerce?.proprietaireId ?? '')
   const [genre, setGenre] = useState<GenreCommerce>(commerce ? genreCommerce(commerce) : 'standard')
   const [taux, setTaux] = useState(commerce?.taux?.toString() ?? '')
-  const duree = commerce?.dureeMinutes
+  // Nouveau commerce : la durée du jeu est proposée d'office (22 h pour un commerce plein)
+  const duree = commerce ? commerce.dureeMinutes : DUREE_DEFAUT_MINUTES
   const [heures, setHeures] = useState(duree === null || duree === undefined ? '' : String(Math.floor(duree / 60)))
   const [minutes, setMinutes] = useState(duree === null || duree === undefined ? '' : String(duree % 60))
   const [montantMax, setMontantMax] = useState(commerce?.montantMax?.toString() ?? '')
@@ -146,7 +148,7 @@ export function CommerceModal({
             />
           </label>
           <label className="block space-y-1 text-sm">
-            <span className="text-zinc-400">Durée : heures</span>
+            <span className="text-zinc-400">Plein blanchi en : heures</span>
             <input
               type="number"
               className={inputClass}
@@ -170,7 +172,7 @@ export function CommerceModal({
           </label>
         </div>
         <label className="block space-y-1 text-sm">
-          <span className="text-zinc-400">Montant maximal blanchissable ($ de sale)</span>
+          <span className="text-zinc-400">Plafond du commerce ($ de sale)</span>
           <input
             type="number"
             className={inputClass}
@@ -181,7 +183,9 @@ export function CommerceModal({
           />
         </label>
         <p className="text-xs text-zinc-500">
-          Taux, durée et montant maximal sont facultatifs. Un taux de 80 % rend 8 000 $ de propre pour 10 000 $ de sale.
+          Un taux de 70 % rend 7 000 $ de propre pour 10 000 $ de sale. La durée est le temps que met un commerce
+          plein à tout blanchir. Les trois valeurs sont facultatives, mais il les faut toutes pour que l’appli estime
+          le blanchiment d’un de nos commerces.
         </p>
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">Note (facultatif)</span>
@@ -193,7 +197,7 @@ export function CommerceModal({
             <Button
               variant="danger"
               disabled={envoi || occupe}
-              title={occupe ? 'Un blanchiment est en cours dans ce commerce' : undefined}
+              title={occupe ? 'Il reste de l’argent dans ce commerce' : undefined}
               onClick={() => {
                 if (window.confirm('Supprimer ce commerce de la liste ?')) executer(() => supprimerCommerce(commerce.id))
               }}

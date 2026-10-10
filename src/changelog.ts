@@ -8,6 +8,16 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.10.0',
+    date: '2026-10-10',
+    changements: [
+      'Blanchiment : nos commerces blanchissent en continu, comme en jeu. On y ajoute du sale et on en retire le propre à tout moment.',
+      'Chaque commerce affiche son sale, son propre, la place libre sous le plafond et le temps avant d’être vide.',
+      '« Relevé » recale l’estimation sur les chiffres lus en jeu.',
+      'Accueil : la tuile Blanchiment montre le propre qui attend et les commerces à recharger.',
+    ],
+  },
+  {
     version: '1.9.0',
     date: '2026-10-10',
     changements: ['Bizne$$ : suivi chiffré de l’activité, jour par jour, pour le pilotage du groupe.'],

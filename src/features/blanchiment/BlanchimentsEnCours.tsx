@@ -1,31 +1,35 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, Chargement, ErrorMessage } from '../../components/ui'
-import { GENRE_LABELS, genreCommerce } from './api'
-import { useBlanchiments } from './useBlanchiments'
+import { estimerCompte } from '../../lib/blanchiment'
+import { formatPrix } from '../../lib/format'
+import { useMaintenant } from '../../lib/presence'
+import { PROPRIETAIRE_NOUS, formatDuree } from './api'
 import { useCommerces } from './useCommerces'
+import { useComptes } from './useComptes'
 
-// Résumé pour l'accueil : les dépôts non récupérés, avec le zip du commerce, son type et où en est le blanchiment.
-// Le détail et les actions sont dans l'onglet Blanchiment.
+// Résumé pour l'accueil : nos commerces, le propre qui y attend, et quand il faudra y remettre du sale.
+// Ajouts, retraits et relevés se font dans l'onglet Blanchiment.
 export function BlanchimentsEnCours() {
-  const depots = useBlanchiments()
   const commerces = useCommerces()
-  // Rafraîchi toutes les 15 secondes : un dépôt passe à « Terminé » sans recharger la page
-  const [maintenant, setMaintenant] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setMaintenant(Date.now()), 15_000)
-    return () => clearInterval(id)
-  }, [])
+  const comptes = useComptes()
+  const maintenant = useMaintenant()
 
-  // Les dépôts terminés (à récupérer) d'abord, puis ceux qui finissent le plus tôt
-  const enCours = depots.data
-    .filter((d) => d.statut === 'en_cours')
-    .map((depot) => ({
-      depot,
-      commerce: commerces.data.find((c) => c.id === depot.commerceId),
-      termine: maintenant >= depot.fin.toMillis(),
+  // Ceux à recharger d'abord, puis ceux qui seront vides le plus tôt
+  const nos = commerces.data
+    .filter((c) => c.proprietaireId === PROPRIETAIRE_NOUS)
+    .map((commerce) => ({
+      commerce,
+      etat: estimerCompte(
+        comptes.data.find((c) => c.id === commerce.id),
+        commerce,
+        maintenant,
+      ),
     }))
-    .sort((a, b) => Number(b.termine) - Number(a.termine) || a.depot.fin.toMillis() - b.depot.fin.toMillis())
+    .sort(
+      (a, b) =>
+        (a.etat.minutesAvantVide ?? Infinity) - (b.etat.minutesAvantVide ?? Infinity) ||
+        a.commerce.zip.localeCompare(b.commerce.zip, 'fr', { numeric: true }),
+    )
 
   return (
     <Card
@@ -37,22 +41,31 @@ export function BlanchimentsEnCours() {
         </Link>
       }
     >
-      <ErrorMessage>{depots.error ?? commerces.error}</ErrorMessage>
-      {depots.loading || commerces.loading ? (
+      <ErrorMessage>{commerces.error ?? comptes.error}</ErrorMessage>
+      {commerces.loading || comptes.loading ? (
         <Chargement />
-      ) : enCours.length === 0 ? (
-        <p className="text-sm text-zinc-500">Aucun blanchiment en cours.</p>
+      ) : nos.length === 0 ? (
+        <p className="text-sm text-zinc-500">Aucun commerce à nous.</p>
       ) : (
         <ul className="divide-y divide-zinc-800">
-          {enCours.map(({ depot, commerce, termine }) => (
-            <li key={depot.id} className="flex items-baseline justify-between gap-2 py-1.5 text-sm">
+          {nos.map(({ commerce, etat }) => (
+            <li key={commerce.id} className="flex items-baseline justify-between gap-2 py-1.5 text-sm">
               <span className="min-w-0 truncate">
-                {/* Le nom figé du dépôt sert de repli si le commerce a été supprimé entre-temps */}
-                <span className="font-semibold text-zinc-100 tabular-nums">{commerce?.zip ?? depot.commerceNom}</span>
-                {commerce && <span className="text-zinc-500"> · {GENRE_LABELS[genreCommerce(commerce)]}</span>}
+                <span className="font-semibold text-zinc-100 tabular-nums">{commerce.zip}</span>
+                <span className="text-zinc-500"> · </span>
+                <span className="font-medium text-emerald-400 tabular-nums">{formatPrix(etat.propre)}</span>
+                <span className="text-zinc-500"> propre</span>
               </span>
-              <span className={`font-medium whitespace-nowrap ${termine ? 'text-emerald-400' : 'text-amber-300'}`}>
-                {termine ? 'Terminé' : 'En cours'}
+              <span
+                className={`font-medium whitespace-nowrap ${
+                  !etat.estimable ? 'text-zinc-500' : etat.sale > 0 ? 'text-amber-300' : 'text-red-400'
+                }`}
+              >
+                {!etat.estimable
+                  ? 'Non estimé'
+                  : etat.sale > 0
+                    ? `Vide dans ${formatDuree(Math.ceil(etat.minutesAvantVide ?? 0))}`
+                    : 'À recharger'}
               </span>
             </li>
           ))}

@@ -713,12 +713,48 @@ describe('blanchiment', () => {
     await assertSucceeds(updateDoc(doc(dbDe('n1'), 'commerces', 'co1'), { taux: 75, updatedAt: serverTimestamp() }))
     await assertFails(deleteDoc(doc(dbDe('noir'), 'commerces', 'co1')))
   })
-  it('seuls les gradés lancent un dépôt, en leur nom', async () => {
-    await assertFails(setDoc(doc(dbDe('violet'), 'blanchiments', 'b2'), depot('violet')))
-    await assertFails(setDoc(doc(dbDe('n2'), 'blanchiments', 'b3'), depot('n1')))
-    await assertFails(setDoc(doc(dbDe('n2'), 'blanchiments', 'b4'), depot('n2', { montant: 0 })))
-    await assertFails(setDoc(doc(dbDe('n2'), 'blanchiments', 'b5'), depot('n2', { statut: 'recupere' })))
-    await assertSucceeds(setDoc(doc(dbDe('n2'), 'blanchiments', 'b6'), depot('n2', { lieuId: 'qg' })))
+  it('plus aucun dépôt à l’ancienne n’est lancé', async () => {
+    await assertFails(setDoc(doc(dbDe('n2'), 'blanchiments', 'b6'), depot('n2', { lieuId: 'qg' })))
+    await assertFails(setDoc(doc(dbDe('admin'), 'blanchiments', 'b7'), depot('admin')))
+  })
+  it('le compte d’un commerce est tenu par les gradés, à l’heure du serveur', async () => {
+    const compte = (modif: Record<string, unknown> = {}) => ({
+      sale: 61375,
+      propre: 9536,
+      releveAt: serverTimestamp(),
+      ...modif,
+    })
+    const ref = (uid: string) => doc(dbDe(uid), 'comptesBlanchiment', 'co1')
+    await assertSucceeds(setDoc(ref('n2'), compte()))
+    await assertSucceeds(setDoc(ref('cache'), compte({ propre: 0 })))
+    await assertSucceeds(getDoc(ref('noir')))
+    await assertFails(setDoc(ref('violet'), compte()))
+    await assertFails(setDoc(ref('n2'), compte({ sale: -1 })))
+    await assertFails(setDoc(ref('n2'), compte({ releveAt: new Date(2020, 0, 1) })))
+    await assertFails(setDoc(ref('n2'), compte({ note: 'x' })))
+  })
+  it('le journal des opérations est signé et en ajout seul', async () => {
+    const operation = (par: string, modif: Record<string, unknown> = {}) => ({
+      type: 'depot',
+      commerceId: 'co1',
+      commerceNom: 'Diego’s',
+      montant: 5000,
+      sale: 66375,
+      propre: 9536,
+      lieuId: 'qg',
+      parUid: par,
+      createdAt: serverTimestamp(),
+      ...modif,
+    })
+    const ref = (uid: string, id: string) => doc(dbDe(uid), 'operationsBlanchiment', id)
+    await assertSucceeds(setDoc(ref('n2', 'o1'), operation('n2')))
+    await assertSucceeds(setDoc(ref('n2', 'o2'), operation('n2', { type: 'releve', montant: null, lieuId: null })))
+    await assertFails(setDoc(ref('violet', 'o3'), operation('violet')))
+    await assertFails(setDoc(ref('n2', 'o4'), operation('n1')))
+    await assertFails(setDoc(ref('n2', 'o5'), operation('n2', { montant: 0 })))
+    await assertFails(setDoc(ref('n2', 'o6'), operation('n2', { type: 'releve' })))
+    await assertFails(updateDoc(ref('admin', 'o1'), { montant: 1 }))
+    await assertFails(deleteDoc(ref('admin', 'o1')))
   })
   it('récupération par un gradé, puis plus aucun changement', async () => {
     await assertFails(updateDoc(doc(dbDe('violet'), 'blanchiments', 'b1'), recuperation('violet')))

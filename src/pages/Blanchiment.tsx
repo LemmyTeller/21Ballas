@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMembre } from '../auth/AuthContext'
 import { Modal } from '../components/Modal'
 import { Button, Card, Chargement, ErrorMessage, inputClass } from '../components/ui'
@@ -12,37 +12,30 @@ import {
   propreAttendu,
 } from '../features/blanchiment/api'
 import { CommerceModal } from '../features/blanchiment/CommerceModal'
-import { LancementModal } from '../features/blanchiment/LancementModal'
+import { CompteModal, type ActionCompte } from '../features/blanchiment/CompteModal'
 import { RecuperationModal } from '../features/blanchiment/RecuperationModal'
 import { useBlanchiments } from '../features/blanchiment/useBlanchiments'
 import { useCommerces } from '../features/blanchiment/useCommerces'
+import { useComptes, useOperations } from '../features/blanchiment/useComptes'
 import { useLieux } from '../features/gestion/useLieux'
 import { useMembres } from '../features/members/useMembres'
 import { useArticles } from '../features/stock/useArticles'
 import { comparerPartenaires } from '../features/tarifs/api'
 import { TuileCouleur } from '../features/tarifs/TuileCouleur'
 import { usePartenaires } from '../features/tarifs/usePartenaires'
+import { estimerCompte } from '../lib/blanchiment'
 import { formatPrix } from '../lib/format'
+import { useMaintenant } from '../lib/presence'
 import { aAuMoins, formatDate, nomAffiche } from '../lib/roles'
 import type { Blanchiment as Depot, CommerceVille, GenreCommerce } from '../types'
 
 type Fenetre =
   | { type: 'commerce'; commerce?: CommerceVille }
-  | { type: 'lancement'; commerce: CommerceVille }
+  | { type: 'compte'; commerce: CommerceVille; action: ActionCompte }
   | { type: 'recuperation'; depot: Depot }
   | { type: 'historique' }
 
 const HISTORIQUE_MAX = 50
-
-// Heure courante, rafraîchie toutes les 15 secondes : le temps restant d'un dépôt avance sans recharger la page
-function useHorloge(): number {
-  const [maintenant, setMaintenant] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setMaintenant(Date.now()), 15_000)
-    return () => clearInterval(id)
-  }, [])
-  return maintenant
-}
 
 const GENRE_CLASSES: Record<GenreCommerce, string> = {
   standard: 'text-zinc-400',
@@ -66,7 +59,10 @@ export function Blanchiment() {
   const lieux = useLieux()
   const articles = useArticles()
   const membres = useMembres()
-  const maintenant = useHorloge()
+  const comptes = useComptes()
+  const operations = useOperations()
+  // Toutes les 15 secondes : sale et propre avancent sans recharger la page
+  const maintenant = useMaintenant(15_000)
   const [recherche, setRecherche] = useState('')
   // Tri du tableau des autres commerces par zip ; null : rangés par groupe
   const [triZip, setTriZip] = useState<'asc' | 'desc' | null>(null)
@@ -74,7 +70,13 @@ export function Blanchiment() {
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
   const estGrade = aAuMoins(moi, 'n2')
-  const chargement = commerces.loading || depots.loading || partenaires.loading || lieux.loading || articles.loading
+  const chargement =
+    commerces.loading ||
+    depots.loading ||
+    comptes.loading ||
+    partenaires.loading ||
+    lieux.loading ||
+    articles.loading
 
   const parZip = (a: CommerceVille, b: CommerceVille) => a.zip.localeCompare(b.zip, 'fr', { numeric: true })
   const proprietaire = (commerce: CommerceVille) => partenaires.data.find((p) => p.id === commerce.proprietaireId)
@@ -105,6 +107,15 @@ export function Blanchiment() {
     .sort((a, b) => (b.recupereAt?.toMillis() ?? Infinity) - (a.recupereAt?.toMillis() ?? Infinity))
     .slice(0, HISTORIQUE_MAX)
 
+  // Journal du nouveau fonctionnement : ajouts, retraits et relevés, du plus récent au plus ancien
+  const journal = [...operations.data]
+    .sort((a, b) => (b.createdAt?.toMillis() ?? Infinity) - (a.createdAt?.toMillis() ?? Infinity))
+    .slice(0, HISTORIQUE_MAX)
+  const totalDe = (type: 'depot' | 'retrait') =>
+    operations.data.filter((op) => op.type === type).reduce((total, op) => total + (op.montant ?? 0), 0)
+  const totalDepose = totalDe('depot')
+  const totalRetire = totalDe('retrait')
+
   function annuler(depot: Depot) {
     const retour = depot.lieuId ? ' Les billets retourneront dans le stock.' : ''
     if (!window.confirm(`Annuler le blanchiment de ${formatPrix(depot.montant)} dans ${depot.commerceNom} ?${retour}`)) return
@@ -118,7 +129,8 @@ export function Blanchiment() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-50">Blanchiment</h1>
           <p className="text-sm text-zinc-400">
-            Commerces recensés en ville, par zip, et argent sale en cours de blanchiment dans les nôtres.
+            Commerces recensés en ville, par zip. Les nôtres blanchissent en continu : on y ajoute du sale et on en
+            retire le propre à tout moment.
           </p>
         </div>
         <div className="flex gap-2">
@@ -130,7 +142,14 @@ export function Blanchiment() {
       </header>
 
       <ErrorMessage>
-        {commerces.error ?? depots.error ?? partenaires.error ?? lieux.error ?? articles.error ?? erreurAction}
+        {commerces.error ??
+          depots.error ??
+          comptes.error ??
+          operations.error ??
+          partenaires.error ??
+          lieux.error ??
+          articles.error ??
+          erreurAction}
       </ErrorMessage>
 
       {chargement ? (
@@ -147,6 +166,8 @@ export function Blanchiment() {
             ) : (
               <div className="grid items-start gap-6 lg:grid-cols-2">
                 {nos.map((commerce) => {
+                  const compte = comptes.data.find((c) => c.id === commerce.id)
+                  const etat = estimerCompte(compte, commerce, maintenant)
                   const depot = depotEnCours(commerce)
                   const fin = depot?.fin.toMillis() ?? 0
                   const pret = depot !== undefined && maintenant >= fin
@@ -156,7 +177,7 @@ export function Blanchiment() {
                   return (
                     <Card
                       key={commerce.id}
-                      className={pret ? 'border-l-emerald-500!' : undefined}
+                      className={etat.propre > 0 ? 'border-l-emerald-500!' : undefined}
                       title={nomCommerce(commerce)}
                       action={
                         estGrade && (
@@ -181,17 +202,83 @@ export function Blanchiment() {
                       {commerce.description && <p className="text-sm text-zinc-400">{commerce.description}</p>}
                       {commerce.note && <p className="text-xs text-zinc-500">{commerce.note}</p>}
 
-                      <div className="mt-4">
-                        {!depot ? (
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-sm text-zinc-500">Rien à blanchir en cours.</p>
-                            {estGrade && (
-                              <Button onClick={() => setFenetre({ type: 'lancement', commerce })}>
-                                Lancer un blanchiment
-                              </Button>
+                      {/* Le compte du commerce : il blanchit en continu, comme en jeu */}
+                      <div className="mt-4 space-y-2">
+                        <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                          <span className="text-sm text-zinc-400">
+                            Sale{' '}
+                            <span className="text-xl font-semibold text-amber-400 tabular-nums">
+                              {formatPrix(etat.sale)}
+                            </span>
+                            {commerce.montantMax != null && (
+                              <span className="tabular-nums"> / {formatPrix(commerce.montantMax)}</span>
                             )}
-                          </div>
+                          </span>
+                          <span className="text-sm text-zinc-400">
+                            Propre{' '}
+                            <span className="text-xl font-semibold text-emerald-400 tabular-nums">
+                              {formatPrix(etat.propre)}
+                            </span>
+                          </span>
+                        </p>
+                        {etat.libre !== null && commerce.montantMax ? (
+                          <>
+                            {/* Jauge du plafond : sale en attente, puis part déjà blanchie non retirée, puis place libre */}
+                            <div
+                              role="img"
+                              aria-label={`Plafond occupé à ${Math.round((1 - etat.libre / commerce.montantMax) * 100)} %`}
+                              className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-zinc-800"
+                            >
+                              <div className="h-full bg-amber-500" style={{ width: `${(etat.sale / commerce.montantMax) * 100}%` }} />
+                              <div
+                                className="h-full bg-emerald-500"
+                                style={{
+                                  width: `${Math.max(0, 1 - (etat.sale + etat.libre) / commerce.montantMax) * 100}%`,
+                                }}
+                              />
+                            </div>
+                            <p className="flex flex-wrap justify-between gap-x-4 text-sm">
+                              <span className={etat.sale > 0 ? 'text-zinc-300' : 'font-semibold text-red-400'}>
+                                {etat.sale > 0
+                                  ? `Vide dans ${formatDuree(Math.ceil(etat.minutesAvantVide ?? 0))}`
+                                  : 'À recharger : plus de sale à blanchir'}
+                              </span>
+                              <span className="text-zinc-400">Place libre {formatPrix(etat.libre)}</span>
+                            </p>
+                          </>
                         ) : (
+                          <p className="text-xs text-amber-300">
+                            Renseigne le taux, la durée et le plafond sur la fiche pour que l’appli estime le blanchiment.
+                          </p>
+                        )}
+                        <p className="text-xs text-zinc-500">
+                          {compte?.releveAt
+                            ? `${etat.estimable ? 'Estimé à partir du' : 'Dernier'} relevé du ${formatDate(compte.releveAt, true)}`
+                            : 'Aucun relevé pour le moment : saisis les chiffres du jeu avec « Relevé ».'}
+                        </p>
+                        {estGrade && (
+                          <div className="flex flex-wrap justify-end gap-2 pt-1">
+                            <Button variant="ghost" onClick={() => setFenetre({ type: 'compte', commerce, action: 'releve' })}>
+                              Relevé
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              disabled={etat.propre <= 0}
+                              onClick={() => setFenetre({ type: 'compte', commerce, action: 'retrait' })}
+                            >
+                              Retirer du propre
+                            </Button>
+                            <Button onClick={() => setFenetre({ type: 'compte', commerce, action: 'depot' })}>
+                              Ajouter du sale
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Ancien dépôt encore ouvert : il se clôt comme avant, puis ce bloc disparaît */}
+                      {depot && (
+                        <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+                          <p className="mb-2 text-xs tracking-wide text-zinc-500 uppercase">Ancien dépôt</p>
                           <div className="space-y-2">
                             <div className="flex flex-wrap items-baseline justify-between gap-2">
                               <p className={`text-sm font-semibold ${pret ? 'text-emerald-400' : 'text-amber-300'}`}>
@@ -238,8 +325,8 @@ export function Blanchiment() {
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </Card>
                   )
                 })}
@@ -348,13 +435,24 @@ export function Blanchiment() {
         <CommerceModal
           commerce={fenetre.commerce}
           partenaires={partenaires.data}
-          occupe={fenetre.commerce ? depotEnCours(fenetre.commerce) !== undefined : false}
+          occupe={
+            fenetre.commerce
+              ? depotEnCours(fenetre.commerce) !== undefined ||
+                comptes.data.some((c) => c.id === fenetre.commerce?.id && (c.sale > 0 || c.propre > 0))
+              : false
+          }
           onClose={() => setFenetre(null)}
         />
       )}
-      {fenetre?.type === 'lancement' && (
-        <LancementModal
+      {fenetre?.type === 'compte' && (
+        <CompteModal
+          action={fenetre.action}
           commerce={fenetre.commerce}
+          estimation={estimerCompte(
+            comptes.data.find((c) => c.id === fenetre.commerce.id),
+            fenetre.commerce,
+            maintenant,
+          )}
           lieux={lieux.data}
           articles={articles.data}
           acteurUid={moi.uid}
@@ -366,10 +464,52 @@ export function Blanchiment() {
       )}
       {fenetre?.type === 'historique' && (
         <Modal title="Historique des blanchiments" onClose={() => setFenetre(null)}>
-          {historique.length === 0 ? (
-            <p className="text-sm text-zinc-500">Aucun blanchiment récupéré pour le moment.</p>
-          ) : (
-            <ul className="max-h-[60svh] divide-y divide-zinc-800 overflow-y-auto pr-1 text-sm">
+          <p className="text-sm text-zinc-300">
+            Sale déposé{' '}
+            <span className="font-semibold text-amber-400 tabular-nums">{formatPrix(totalDepose)}</span> · propre retiré{' '}
+            <span className="font-semibold text-emerald-400 tabular-nums">{formatPrix(totalRetire)}</span>
+          </p>
+          {journal.length === 0 && historique.length === 0 && (
+            <p className="text-sm text-zinc-500">Aucune opération pour le moment.</p>
+          )}
+          <div className="max-h-[60svh] space-y-4 overflow-y-auto pr-1">
+            {journal.length > 0 && (
+              <ul className="divide-y divide-zinc-800 text-sm">
+                {journal.map((op) => (
+                  <li key={op.id} className="py-2">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-medium text-zinc-100">{op.commerceNom}</span>
+                      <span className="text-xs text-zinc-500">{formatDate(op.createdAt, true)}</span>
+                    </div>
+                    <p className="text-zinc-300">
+                      {op.type === 'depot' && (
+                        <>
+                          Ajout de <span className="font-semibold text-amber-400 tabular-nums">{formatPrix(op.montant)}</span>{' '}
+                          de sale
+                        </>
+                      )}
+                      {op.type === 'retrait' && (
+                        <>
+                          Retrait de{' '}
+                          <span className="font-semibold text-emerald-400 tabular-nums">{formatPrix(op.montant)}</span> de
+                          propre
+                        </>
+                      )}
+                      {op.type === 'releve' && 'Relevé'}
+                      <span className="text-zinc-500">
+                        {' '}
+                        → sale {formatPrix(op.sale)}, propre {formatPrix(op.propre)}
+                      </span>
+                    </p>
+                    <p className="text-xs text-zinc-500">Par {nomMembre(op.parUid)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {historique.length > 0 && <p className="text-xs tracking-wide text-zinc-500 uppercase">Anciens dépôts</p>}
+          </div>
+          {historique.length > 0 && (
+            <ul className="max-h-[30svh] divide-y divide-zinc-800 overflow-y-auto pr-1 text-sm">
               {historique.map((depot) => (
                 <li key={depot.id} className="py-2">
                   <div className="flex items-baseline justify-between gap-3">

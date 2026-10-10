@@ -131,17 +131,27 @@ la documentation de FiveM : `https://docs.fivem.net/vehicles/<spawn>.webp`. Une 
 
 ## Blanchiment
 
-Onglet **Blanchiment**, visible par tous les membres validés ; Admin, N1 et N2 recensent les commerces et gèrent les dépôts.
+Onglet **Blanchiment**, visible par tous les membres validés ; Admin, N1 et N2 recensent les commerces et tiennent leurs comptes.
 
 - `commerces` : commerces de la ville qui blanchissent l'argent sale, repérés par leur zip. `proprietaireId` vaut `'ballas'`
   (à nous, `PROPRIETAIRE_NOUS`), l'id d'un partenaire, ou `null` si le propriétaire est inconnu. Un commerce est de genre
-  `standard`, `securise` ou `express` (`genre`). Taux, durée et montant maximal blanchissable (`montantMax`) sont facultatifs.
-- `blanchiments` : dépôts d'argent sale dans nos commerces, un seul en cours par commerce. Le **taux est la part récupérée** :
-  80 % → 10 000 $ de sale rendent 8 000 $ de propre.
+  `standard`, `securise` ou `express` (`genre`). `taux` : part récupérée en propre (70 % → 10 000 $ de sale rendent 7 000 $).
+  `dureeMinutes` : temps que met un commerce plein à tout blanchir (22 h en jeu). `montantMax` : son plafond.
 
-Un dépôt est lancé (les billets de 1$ sortent du stock du lieu choisi, dans la même écriture), puis récupéré une fois le temps écoulé :
-il passe alors dans l'historique et ne change plus. « Prêt à récupérer » se déduit de l'heure de fin, sans tâche planifiée.
-Un dépôt en cours peut être annulé : il est supprimé et les billets retournent dans le stock.
+**Un de nos commerces blanchit en continu**, comme en jeu (`src/lib/blanchiment.ts`) :
+
+- la vitesse est fixe, `montantMax ÷ dureeMinutes` dollars de sale par minute, même quand personne n'est connecté ;
+- on retire le propre disponible à tout moment, on rajoute du sale tant qu'il y a de la place ;
+- le plafond porte sur le sale en attente **plus** le sale déjà blanchi dont le propre n'a pas été retiré.
+
+`comptesBlanchiment/{id du commerce}` garde l'état au dernier relevé (`sale`, `propre`, `releveAt`) ; l'état courant s'en déduit
+par `estimerCompte`, sans tâche planifiée. Trois actions, chacune enregistrant le nouvel état et une ligne du journal
+`operationsBlanchiment` dans la même écriture : **ajouter du sale** (les billets de 1$ sortent du stock du lieu choisi),
+**retirer du propre** (seulement noté, l'argent propre n'est pas un item du Stock) et **relevé** (les deux chiffres lus en jeu,
+pour recaler l'estimation). Sans taux, durée ou plafond sur sa fiche, un commerce n'est pas estimé : il affiche son dernier relevé.
+
+`blanchiments` est l'ancien fonctionnement (un dépôt unique, récupéré à la fin) : plus aucun n'est créé, ceux encore en cours se
+récupèrent ou s'annulent comme avant, et les autres restent en historique.
 
 ## Amendes
 

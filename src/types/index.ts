@@ -283,6 +283,35 @@ export interface CommerceVille {
   updatedAt: Timestamp | null
 }
 
+// État d'un de nos commerces au dernier relevé (document comptesBlanchiment/{id du commerce}). Le commerce
+// blanchit en continu : où il en est maintenant se calcule à partir d'ici (voir src/lib/blanchiment.ts).
+export interface CompteBlanchiment {
+  id: string
+  // Sale en attente et propre disponible, à `releveAt`
+  sale: number
+  propre: number
+  releveAt: Timestamp | null
+}
+
+// Ligne du journal d'un commerce : sale ajouté, propre retiré, ou relevé des chiffres lus en jeu
+export interface OperationBlanchiment {
+  id: string
+  type: 'depot' | 'retrait' | 'releve'
+  commerceId: string
+  // Nom au moment de l'opération : le journal reste lisible si le commerce est supprimé
+  commerceNom: string
+  // Somme ajoutée ou retirée ; null pour un relevé
+  montant: number | null
+  // État du commerce juste après l'opération
+  sale: number
+  propre: number
+  // Lieu d'où sont sortis les billets de 1$ d'un ajout ; null sinon
+  lieuId: string | null
+  parUid: string
+  createdAt: Timestamp | null
+}
+
+// Ancien fonctionnement, par dépôt unique : conservé pour l'historique, plus aucun n'est créé.
 // Dépôt d'argent sale dans un de nos commerces. Taux et durée sont ceux retenus au lancement.
 export interface Blanchiment {
   id: string
