@@ -54,9 +54,19 @@ export function enregistrerMenuReduit(reduit: boolean) {
 
 // ---- Disposition de l'accueil ----
 
-// Les encarts de l'accueil, dans l'ordre des emplacements par défaut : rangée du haut (large, large, étroit),
-// puis rangée du bas (large, deux étroits l'un sur l'autre, étroit).
-export const ENCARTS = ['taches', 'annonces', 'presents', 'saisie', 'recidives', 'blanchiment', 'contrats'] as const
+// Les encarts de l'accueil, dans l'ordre des emplacements par défaut : rangée du haut (trois emplacements), puis
+// rangée du bas (un emplacement, deux l'un sur l'autre, et la dernière colonne : le 7e en bas, le 8e au-dessus).
+// Un nouvel encart s'ajoute en fin de liste : il prend le nouvel emplacement chez ceux qui ont déjà rangé leur accueil.
+export const ENCARTS = [
+  'taches',
+  'annonces',
+  'presents',
+  'saisie',
+  'recidives',
+  'blanchiment',
+  'contrats',
+  'biz',
+] as const
 export type Encart = (typeof ENCARTS)[number]
 const CLE_ACCUEIL = 'ballas.accueil'
 
@@ -99,6 +109,7 @@ const LARGEURS_DEFAUT: Record<Encart, Largeur> = {
   recidives: 'etroit',
   blanchiment: 'etroit',
   contrats: 'etroit',
+  biz: 'etroit',
 }
 const CLE_LARGEURS = 'ballas.largeurs'
 

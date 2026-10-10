@@ -1059,6 +1059,14 @@ describe('annonces', () => {
     await assertFails(deleteDoc(doc(dbDe('noir'), 'annonces', 'a1')))
     await assertSucceeds(deleteDoc(doc(dbDe('violet'), 'annonces', 'a1')))
   })
+  it('titre et message corrigés par l’auteur Masque violet ou par un gradé, et rien d’autre', async () => {
+    const a1 = (uid: string) => doc(dbDe(uid), 'annonces', 'a1')
+    await assertSucceeds(updateDoc(a1('violet'), { titre: 'Réunion à 21 h', contenu: 'Au QG' }))
+    await assertSucceeds(updateDoc(a1('n2'), { contenu: 'Au QG, tenue correcte' }))
+    await assertFails(updateDoc(a1('noir'), { titre: 'Non' }))
+    await assertFails(updateDoc(a1('violet'), { titre: '' }))
+    await assertFails(updateDoc(a1('n2'), { auteurUid: 'n2' }))
+  })
   it('un N2 supprime l’annonce d’un autre', async () => {
     await assertSucceeds(deleteDoc(doc(dbDe('n2'), 'annonces', 'a1')))
   })

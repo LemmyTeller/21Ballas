@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMembre } from '../auth/AuthContext'
 import { ImageItem } from '../components/ImageItem'
+import { useContacts } from '../features/annuaire/useContacts'
 import { Button, Card, Chargement, ErrorMessage } from '../components/ui'
 import { annulerCommande, lignesDe, majLignes, montantAttendu, titreCommande } from '../features/commerce/api'
 import { useCommandes } from '../features/commerce/useCommandes'
@@ -16,6 +17,8 @@ import type { Commande, Echange, LigneCommande, StatutCommande } from '../types'
 type Vue = 'en_cours' | 'historique'
 
 const HISTORIQUE_MAX = 50
+// Doit rester aligné sur PREFIXE_CONTACT dans Tarifs.tsx
+const PREFIXE_CONTACT = 'contact-'
 
 const STATUTS: Record<StatutCommande, { label: string; classe: string }> = {
   en_attente: { label: 'En attente', classe: 'bg-amber-950 text-amber-200' },
@@ -62,6 +65,7 @@ export function Commerce() {
   const lieux = useLieux()
   const articles = useArticles()
   const catalogue = useReferences()
+  const contacts = useContacts()
   const [vue, setVue] = useState<Vue>('en_cours')
   const [aValider, setAValider] = useState<Commande | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
@@ -83,6 +87,12 @@ export function Commerce() {
   const nomItem = (cle: string) => reference(cle)?.name ?? `Item ${cle}`
   // Quantité × poids unitaire du catalogue, en kg
   const poidsLigne = (ligne: LigneCommande) => ligne.quantite * (reference(ligne.reference)?.weight ?? 0)
+  // Une transaction avec une petite main porte l'id de sa fiche de l'Annuaire, préfixé (voir Tarifs) :
+  // on y retrouve son numéro. Vide pour un groupe, ou si la fiche a été supprimée.
+  const telephonePM = (commande: Commande) =>
+    commande.partenaireId.startsWith(PREFIXE_CONTACT)
+      ? contacts.data.find((c) => c.id === commande.partenaireId.slice(PREFIXE_CONTACT.length))?.telephone
+      : undefined
   const nomMembre = (uid: string | undefined) => nomAffiche(membres.data.find((m) => m.uid === uid))
 
   const agir = (action: Promise<void>) => {
@@ -154,6 +164,11 @@ export function Commerce() {
                 }
               >
                 <p className="-mt-2 mb-3 text-xs text-zinc-500">
+                  {telephonePM(commande) && (
+                    <span className="mb-1 block text-sm font-medium text-zinc-200 tabular-nums">
+                      Tél. {telephonePM(commande)}
+                    </span>
+                  )}
                   Créée le {formatDate(commande.createdAt, true)} par {nomMembre(commande.creeParUid)}
                   {!enAttente && (
                     <>

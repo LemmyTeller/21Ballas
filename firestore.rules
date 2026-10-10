@@ -770,7 +770,12 @@ service cloud.firestore {
         && shortString(request.resource.data.auteurNom, 100)
         && request.resource.data.createdAt == request.time;
 
-      allow update: if false;
+      // Correction du titre et du message, par ceux qui peuvent supprimer l'annonce
+      allow update: if (isGrade() || (isOfficier() && resource.data.auteurUid == request.auth.uid))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titre', 'contenu'])
+        && shortString(request.resource.data.titre, 120)
+        && request.resource.data.titre.size() > 0
+        && shortString(request.resource.data.contenu, 4000);
 
       allow delete: if isGrade()
         || (isOfficier() && resource.data.auteurUid == request.auth.uid);

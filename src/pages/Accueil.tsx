@@ -2,6 +2,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useMembre } from '../auth/AuthContext'
 import { Avatar, Button, Card, Chargement, ErrorMessage, RoleBadge } from '../components/ui'
+import { Biz } from '../features/accueil/Biz'
 import { Emplacement } from '../features/accueil/Emplacement'
 import { RecidivesEnCours } from '../features/amendes/RecidivesEnCours'
 import { supprimerAnnonce } from '../features/annonces/api'
@@ -80,7 +81,7 @@ export function Accueil() {
   // Variables lues par les classes de grille : elles ne s'appliquent que sur grand écran, où les encarts sont côte à côte
   const colonnes = {
     '--haut': `${colonne(0)} ${colonne(1)} ${colonne(2)}`,
-    '--bas': `${colonne(3)} ${colonne(4, 5)} ${colonne(6)}`,
+    '--bas': `${colonne(3)} ${colonne(4, 5)} ${colonne(7, 6)}`,
     '--bas-2': `${colonne(3)} ${colonne(4, 5)}`,
   } as CSSProperties
 
@@ -92,6 +93,7 @@ export function Accueil() {
     recidives: { nom: 'Récidives', contenu: <RecidivesEnCours /> },
     blanchiment: { nom: 'Blanchiment', contenu: <BlanchimentsEnCours /> },
     contrats: { nom: 'Contrats', contenu: <Contrats membre={membre} /> },
+    biz: { nom: 'Biz', contenu: <Biz /> },
   }
 
   const emplacement = (i: number) => {
@@ -170,15 +172,18 @@ export function Accueil() {
             {emplacement(1)}
             {emplacement(2)}
           </div>
-          {/* Rangée du bas, calée en bas de page : trois colonnes, celle du milieu portant deux encarts l'un sur
-              l'autre. Sur écran moyen, la troisième passe à la ligne. */}
+          {/* Rangée du bas, calée en bas de page : trois colonnes, les deux dernières portant chacune deux encarts
+              l'un sur l'autre. Sur écran moyen, la troisième passe à la ligne. */}
           <div className="mt-auto grid items-end gap-6 lg:grid-cols-(--bas-2) xl:grid-cols-(--bas)">
             {emplacement(3)}
             <div className="flex min-w-0 flex-col gap-6">
               {emplacement(4)}
               {emplacement(5)}
             </div>
-            {emplacement(6)}
+            <div className="flex min-w-0 flex-col gap-6">
+              {emplacement(7)}
+              {emplacement(6)}
+            </div>
           </div>
         </>
       )}
@@ -284,6 +289,10 @@ function Annonces({ membre, membres }: { membre: Membre; membres: Membre[] }) {
 }
 
 function AnnonceItem({ annonce, membre, auteur }: { annonce: Annonce; membre: Membre; auteur: string }) {
+  const [modification, setModification] = useState(false)
+  // Menu « ⋯ », ancré sous son bouton
+  const [menu, setMenu] = useState<{ droite: number; haut: number } | null>(null)
+  // Mêmes droits pour corriger une annonce que pour la supprimer : un gradé, ou le Masque violet qui l'a écrite
   const peutSupprimer =
     aAuMoins(membre, 'n2') || (membre.role === 'officier' && annonce.auteurUid === membre.uid)
 
@@ -298,11 +307,63 @@ function AnnonceItem({ annonce, membre, auteur }: { annonce: Annonce; membre: Me
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-semibold text-zinc-100">{annonce.titre}</h3>
         {peutSupprimer && (
-          <Button variant="danger" className="shrink-0 px-2 py-0.5 text-xs" onClick={supprimer}>
-            Supprimer
-          </Button>
+          <button
+            type="button"
+            aria-label={`Actions pour l’annonce ${annonce.titre}`}
+            aria-haspopup="menu"
+            title="Actions"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-lg leading-none text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            onClick={(e) => {
+              const cadre = e.currentTarget.getBoundingClientRect()
+              setMenu({ droite: window.innerWidth - cadre.right, haut: cadre.bottom + 4 })
+            }}
+          >
+            ⋯
+          </button>
         )}
       </div>
+      {menu && (
+        <>
+          {/* Fond invisible : un clic ailleurs referme le menu */}
+          <button
+            type="button"
+            aria-label="Fermer le menu"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setMenu(null)}
+          />
+          <div
+            role="menu"
+            className="fixed z-20 min-w-36 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 py-1 text-sm shadow-xl"
+            style={{ right: menu.droite, top: menu.haut }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="block w-full px-3 py-2 text-left text-zinc-100 hover:bg-zinc-800"
+              onClick={() => {
+                setMenu(null)
+                setModification(true)
+              }}
+            >
+              Modifier
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="block w-full px-3 py-2 text-left text-red-300 hover:bg-red-950"
+              onClick={() => {
+                setMenu(null)
+                supprimer()
+              }}
+            >
+              Supprimer
+            </button>
+          </div>
+        </>
+      )}
+      {modification && (
+        <NouvelleAnnonceDialog membre={membre} annonce={annonce} onClose={() => setModification(false)} />
+      )}
       {annonce.contenu && <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-300">{annonce.contenu}</p>}
       <p className="mt-1 text-xs text-zinc-500">
         {auteur} · {formatDate(annonce.createdAt, true)}

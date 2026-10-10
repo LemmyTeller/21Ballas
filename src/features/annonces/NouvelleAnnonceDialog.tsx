@@ -1,12 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
-import type { Membre } from '../../types'
-import { publierAnnonce } from './api'
+import type { Annonce, Membre } from '../../types'
+import { modifierAnnonce, publierAnnonce } from './api'
 
-export function NouvelleAnnonceDialog({ membre, onClose }: { membre: Membre; onClose: () => void }) {
-  const [titre, setTitre] = useState('')
-  const [contenu, setContenu] = useState('')
+// Nouvelle annonce, ou (avec `annonce`) correction du titre et du message d'une annonce déjà publiée
+export function NouvelleAnnonceDialog({
+  membre,
+  annonce,
+  onClose,
+}: {
+  membre: Membre
+  annonce?: Annonce
+  onClose: () => void
+}) {
+  const [titre, setTitre] = useState(annonce?.titre ?? '')
+  const [contenu, setContenu] = useState(annonce?.contenu ?? '')
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -15,7 +24,8 @@ export function NouvelleAnnonceDialog({ membre, onClose }: { membre: Membre; onC
     setEnvoi(true)
     setErreur(null)
     try {
-      await publierAnnonce(membre, titre, contenu)
+      if (annonce) await modifierAnnonce(annonce.id, titre, contenu)
+      else await publierAnnonce(membre, titre, contenu)
       onClose()
     } catch (err) {
       setErreur((err as Error).message)
@@ -24,7 +34,7 @@ export function NouvelleAnnonceDialog({ membre, onClose }: { membre: Membre; onC
   }
 
   return (
-    <Modal title="Nouvelle annonce" onClose={onClose}>
+    <Modal title={annonce ? 'Modifier l’annonce' : 'Nouvelle annonce'} onClose={onClose}>
       <form onSubmit={publier} className="space-y-3">
         <input
           className={inputClass}
@@ -49,7 +59,7 @@ export function NouvelleAnnonceDialog({ membre, onClose }: { membre: Membre; onC
             Annuler
           </Button>
           <Button type="submit" disabled={envoi || !titre.trim()}>
-            Publier
+            {annonce ? 'Enregistrer' : 'Publier'}
           </Button>
         </div>
       </form>
