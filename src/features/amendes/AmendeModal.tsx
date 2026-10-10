@@ -7,9 +7,9 @@ import {
   categorieDelit,
   cleRecidive,
   finRecidive,
-  formatRestant,
   nomDelit,
 } from '../../lib/delits'
+import { formatRestant } from '../../lib/format'
 import { nomAffiche } from '../../lib/roles'
 import type { Amende, Membre } from '../../types'
 import { creerAmende, majAmende, supprimerAmende } from './api'

@@ -10,10 +10,10 @@ import {
   cleRecidive,
   estRecidive,
   finRecidive,
-  formatRestant,
   nomDelit,
   recidivesEnCours,
 } from '../lib/delits'
+import { formatRestant } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
 import { aAuMoins, estValide, nomAffiche, rang } from '../lib/roles'
 import type { Amende } from '../types'

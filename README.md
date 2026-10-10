@@ -156,12 +156,24 @@ Onglet **Amendes**, ouvert à tous les membres validés. Il remplace le tableau 
   par l'auteur de la saisie, le joueur concerné ou Admin, N1, N2. Une amende ne peut pas être datée dans le futur.
 - L'accueil liste les récidives en cours, avec le temps restant.
 
-## Event (course au produit)
+## Map
 
-Onglet **Event**, visible par tous les membres validés. Un seul event à la fois, dans le document `events/courant` :
-`nom` et `points` (table item → points par unité). Admin, N1 et N2 ajoutent les items, règlent leurs points, renomment et vident l'event.
-Les quantités ne sont pas stockées : elles sont lues dans le Stock, tous lieux confondus. Score d'un item = quantité × points ;
-le score total suit donc le stock en temps réel.
+Onglet **Map**, ouvert à tous les membres validés : la carte du serveur (avec les zips) et les points du groupe.
+
+- **Carte** : `map_gta5_21jc.png`, à la racine, n'est pas versionnée (ressource du serveur). `npm run carte` la découpe en tuiles
+  WebP dans `public/carte/` (non versionné non plus) et écrit ses dimensions dans `src/data/carte.json`.
+  **À lancer avant un build sur une machine neuve**, et à chaque changement de carte. Affichage avec Leaflet, en repère image.
+- **Points** (`pointsCarte`) : commerce (avec appartenance), plan de récolte, point d'intérêt, danger. Position en fraction de la
+  carte (0 à 1). Tout membre validé pose un point ; l'auteur et Admin, N1, N2 le modifient, le déplacent et le suppriment.
+- **Plan de récolte** : posé avec une quantité, il passe par Germination, Croissance et Floraison, 30 minutes chacune
+  (`DUREE_ETAPE_MS`). Après Germination et Croissance il faut l'arroser pour lancer l'étape suivante, dont le chrono part à
+  l'arrosage ; après Floraison il est prêt, et « Récolté » le supprime. Arroser et récolter sont ouverts à tous.
+  Rien n'est planifié : le statut se déduit de `etapeDebut`, et les règles refusent un arrosage avant 30 minutes.
+- **Plan et Stock** : poser un plan sort ses graines du lieu choisi (une « Graine de Weed » par plant) ; le récolter fait entrer
+  dix « Têtes de cannabis » par plant dans le lieu choisi et dans la saisie journalière, dans la même écriture que la
+  disparition du plan (`REFERENCE_GRAINE`, `REFERENCE_TETE`, `TETES_PAR_PLANT` dans `src/lib/carte.ts`).
+  Supprimer un plan, ou changer sa quantité après coup, ne touche pas au stock.
+- `http://localhost:5173/?apercu=carte` affiche la carte seule, sans connexion (développement uniquement).
 
 ## Annuaire
 

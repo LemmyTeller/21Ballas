@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMembre } from '../auth/AuthContext'
 import { Avatar, Button, Card, Chargement, ErrorMessage, RoleBadge } from '../components/ui'
 import { Biz } from '../features/accueil/Biz'
+import { Jardinage } from '../features/carte/Jardinage'
 import { Emplacement } from '../features/accueil/Emplacement'
 import { RecidivesEnCours } from '../features/amendes/RecidivesEnCours'
 import { supprimerAnnonce } from '../features/annonces/api'
@@ -81,8 +82,8 @@ export function Accueil() {
   // Variables lues par les classes de grille : elles ne s'appliquent que sur grand écran, où les encarts sont côte à côte
   const colonnes = {
     '--haut': `${colonne(0)} ${colonne(1)} ${colonne(2)}`,
-    '--bas': `${colonne(3)} ${colonne(4, 5)} ${colonne(7, 6)}`,
-    '--bas-2': `${colonne(3)} ${colonne(4, 5)}`,
+    '--bas': `${colonne(3)} ${colonne(8, 4, 5)} ${colonne(7, 6)}`,
+    '--bas-2': `${colonne(3)} ${colonne(8, 4, 5)}`,
   } as CSSProperties
 
   const encarts: Record<Encart, { nom: string; contenu: ReactNode }> = {
@@ -94,6 +95,7 @@ export function Accueil() {
     blanchiment: { nom: 'Blanchiment', contenu: <BlanchimentsEnCours /> },
     contrats: { nom: 'Contrats', contenu: <Contrats membre={membre} /> },
     biz: { nom: 'Biz', contenu: <Biz /> },
+    jardinage: { nom: 'Jardinage', contenu: <Jardinage /> },
   }
 
   const emplacement = (i: number) => {
@@ -177,6 +179,7 @@ export function Accueil() {
           <div className="mt-auto grid items-end gap-6 lg:grid-cols-(--bas-2) xl:grid-cols-(--bas)">
             {emplacement(3)}
             <div className="flex min-w-0 flex-col gap-6">
+              {emplacement(8)}
               {emplacement(4)}
               {emplacement(5)}
             </div>

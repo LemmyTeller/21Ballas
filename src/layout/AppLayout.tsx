@@ -8,10 +8,10 @@ import { Avatar, Button, Filigrane, Logo, RoleBadge } from '../components/ui'
 import { usePresenceActive } from '../features/members/usePresenceActive'
 import { auth } from '../lib/firebase'
 import { enregistrerMenuReduit, lireMenuReduit } from '../lib/preferences'
-import { aAuMoins, nomAffiche } from '../lib/roles'
+import { aAuMoins, aLeDroitAdmin, nomAffiche } from '../lib/roles'
 import type { Role } from '../types'
 
-const LIENS: { to: string; label: string; minimum: Role }[] = [
+const LIENS: { to: string; label: string; minimum: Role; admin?: boolean }[] = [
   { to: '/', label: 'Accueil', minimum: 'membre' },
   { to: '/membres', label: 'Membres', minimum: 'membre' },
   { to: '/gestion', label: 'Gestion', minimum: 'membre' },
@@ -21,9 +21,10 @@ const LIENS: { to: string; label: string; minimum: Role }[] = [
   { to: '/blanchiment', label: 'Blanchiment', minimum: 'membre' },
   { to: '/carjacking', label: 'Carjacking', minimum: 'membre' },
   { to: '/amendes', label: 'Amendes', minimum: 'membre' },
-  { to: '/event', label: 'Event', minimum: 'membre' },
+  { to: '/map', label: 'Map', minimum: 'membre' },
   { to: '/annuaire', label: 'Annuaire', minimum: 'membre' },
-  { to: '/inventaire', label: 'Inventaire', minimum: 'n2' },
+  // Catalogue brut du serveur : outil d'administration, proposé aux seuls admins
+  { to: '/inventaire', label: 'Inventaire', minimum: 'membre', admin: true },
   { to: '/journal', label: 'Journal', minimum: 'n2' },
 ]
 
@@ -37,6 +38,8 @@ const LARGEURS: Record<string, string> = {
   '/carjacking': 'max-w-7xl',
   '/stock': 'max-w-[110rem]',
   '/amendes': 'max-w-[110rem]',
+  // La carte prend toute la largeur
+  '/map': 'max-w-none',
 }
 
 const lienBase = 'block whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors'
@@ -75,7 +78,7 @@ export function AppLayout() {
         {!reduit && (
           <>
             <nav className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
-              {LIENS.filter((l) => aAuMoins(membre, l.minimum)).map((l) => (
+              {LIENS.filter((l) => (l.admin ? aLeDroitAdmin(membre) : aAuMoins(membre, l.minimum))).map((l) => (
                 <NavLink
                   key={l.to}
                   to={l.to}

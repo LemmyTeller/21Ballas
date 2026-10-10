@@ -85,13 +85,3 @@ export function estRecidive(amende: Amende, amendes: Amende[]): boolean {
       a.date.toMillis() > date - dureeRecidive(amende.delit),
   )
 }
-
-// « 6 j 5 h », « 5 h 12 », « 12 min »
-export function formatRestant(ms: number): string {
-  const minutes = Math.max(1, Math.ceil(ms / 60_000))
-  const jours = Math.floor(minutes / 1440)
-  const h = Math.floor((minutes % 1440) / 60)
-  const min = minutes % 60
-  if (jours > 0) return `${jours} j ${h} h`
-  return h > 0 ? `${h} h ${String(min).padStart(2, '0')}` : `${min} min`
-}

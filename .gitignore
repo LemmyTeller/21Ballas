@@ -32,3 +32,7 @@ dist-ssr
 # Exports bruts du serveur (donnees internes) : seuls les catalogues reduits de src/data sont versionnes
 21_inventaire_items.json
 21_weapons_list.json
+
+# Carte du serveur et ses tuiles (npm run carte) : ressource du serveur, servie par le site mais non versionnee
+map_gta5_21jc.png
+public/carte/

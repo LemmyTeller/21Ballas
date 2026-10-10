@@ -733,29 +733,78 @@ describe('blanchiment', () => {
   })
 })
 
-describe('event', () => {
-  const event = (db: ReturnType<typeof dbDe>, id = 'courant') => doc(db, 'events', id)
-  const reglage = (modif: Record<string, unknown> = {}) => ({
-    nom: 'Course au produit',
-    points: { '12': 5 },
+describe('map : points de la carte', () => {
+  const point = (par: string, modif: Record<string, unknown> = {}) => ({
+    type: 'interet',
+    x: 0.5,
+    y: 0.5,
+    nom: 'Planque',
+    commentaire: '',
+    proprietaireId: null,
+    quantite: null,
+    etape: null,
+    etapeDebut: null,
+    creeParUid: par,
+    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     ...modif,
   })
+  const plan = (par: string, modif: Record<string, unknown> = {}) =>
+    point(par, { type: 'plan', nom: '', quantite: 12, etape: 'germination', etapeDebut: serverTimestamp(), ...modif })
+  const arrosage = (etape: string) => ({ etape, etapeDebut: serverTimestamp(), updatedAt: serverTimestamp() })
+  const ref = (uid: string, id: string) => doc(dbDe(uid), 'pointsCarte', id)
 
-  it('les gradés règlent l’event, tout membre validé le lit', async () => {
-    await assertSucceeds(setDoc(event(dbDe('n2')), reglage()))
-    await assertSucceeds(setDoc(event(dbDe('cache')), { points: { '13': 2 }, updatedAt: serverTimestamp() }, { merge: true }))
-    await assertSucceeds(getDoc(event(dbDe('noir'))))
-    await assertFails(getDoc(event(dbDe('attente'))))
-    await assertFails(setDoc(event(dbDe('violet')), reglage()))
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      const ilYA = (minutes: number) => new Date(Date.now() - minutes * 60_000)
+      // Point de « violet » ; plan de « violet » en germination depuis 40 min (arrosable), et un autre depuis 5 min
+      await setDoc(doc(db, 'pointsCarte', 'p1'), { ...point('violet'), createdAt: ilYA(60), updatedAt: ilYA(60) })
+      for (const [id, minutes] of [['mur', 40], ['jeune', 5]] as const) {
+        await setDoc(doc(db, 'pointsCarte', id), {
+          ...plan('violet'),
+          etapeDebut: ilYA(minutes),
+          createdAt: ilYA(minutes),
+          updatedAt: ilYA(minutes),
+        })
+      }
+    })
   })
-  it('un seul document, bien formé, jamais supprimé', async () => {
-    await assertFails(setDoc(event(dbDe('n1'), 'autre'), reglage()))
-    await assertFails(setDoc(event(dbDe('n1')), reglage({ points: 'beaucoup' })))
-    await assertFails(setDoc(event(dbDe('n1')), reglage({ score: 100 })))
-    await assertFails(setDoc(event(dbDe('n1')), reglage({ updatedAt: new Date(2020, 0, 1) })))
-    await setDoc(event(dbDe('n1')), reglage())
-    await assertFails(deleteDoc(event(dbDe('admin'))))
+
+  it('tout membre validé pose un point bien formé', async () => {
+    await assertSucceeds(setDoc(ref('noir', 'a'), point('noir')))
+    await assertSucceeds(setDoc(ref('noir', 'b'), point('noir', { type: 'commerce', proprietaireId: 'ballas' })))
+    await assertSucceeds(setDoc(ref('noir', 'c'), plan('noir')))
+    await assertFails(setDoc(ref('attente', 'd'), point('attente')))
+    await assertFails(setDoc(ref('noir', 'e'), point('violet')))
+    await assertFails(setDoc(ref('noir', 'f'), point('noir', { x: 1.5 })))
+    await assertFails(setDoc(ref('noir', 'g'), point('noir', { type: 'tresor' })))
+    await assertFails(setDoc(ref('noir', 'h'), point('noir', { quantite: 3 })))
+  })
+  it('un plan naît en germination, à l’heure du serveur', async () => {
+    await assertFails(setDoc(ref('noir', 'a'), plan('noir', { etape: 'floraison' })))
+    await assertFails(setDoc(ref('noir', 'b'), plan('noir', { etapeDebut: new Date(Date.now() - 3_600_000) })))
+    await assertFails(setDoc(ref('noir', 'c'), plan('noir', { quantite: 0 })))
+  })
+  it('informations et position : l’auteur ou un gradé', async () => {
+    const modif = { nom: 'Nouvelle planque', x: 0.2, updatedAt: serverTimestamp() }
+    await assertSucceeds(updateDoc(ref('violet', 'p1'), modif))
+    await assertSucceeds(updateDoc(ref('n2', 'p1'), modif))
+    await assertFails(updateDoc(ref('noir', 'p1'), modif))
+    await assertFails(updateDoc(ref('violet', 'p1'), { type: 'danger', updatedAt: serverTimestamp() }))
+  })
+  it('arrosage : par tous, l’étape suivante seulement, après 30 minutes', async () => {
+    await assertFails(updateDoc(ref('noir', 'jeune'), arrosage('croissance')))
+    await assertFails(updateDoc(ref('noir', 'mur'), arrosage('floraison')))
+    await assertFails(updateDoc(ref('noir', 'mur'), { ...arrosage('croissance'), etapeDebut: new Date() }))
+    await assertSucceeds(updateDoc(ref('noir', 'mur'), arrosage('croissance')))
+    // La croissance vient de commencer : pas d'arrosage immédiat
+    await assertFails(updateDoc(ref('noir', 'mur'), arrosage('floraison')))
+  })
+  it('suppression : l’auteur ou un gradé ; un plan se récolte par tous', async () => {
+    await assertFails(deleteDoc(ref('noir', 'p1')))
+    await assertSucceeds(deleteDoc(ref('violet', 'p1')))
+    await assertSucceeds(deleteDoc(ref('noir', 'mur')))
   })
 })
 

@@ -8,6 +8,20 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.6.0',
+    date: '2026-10-10',
+    changements: [
+      'Nouvel onglet Map : la carte du serveur avec ses zips, à déplacer et zoomer.',
+      'Chacun y pose des points : commerce (avec son appartenance), plan de récolte, point d’intérêt, danger.',
+      'Plans de récolte : germination, croissance, floraison, 30 minutes chacune ; la carte indique quand arroser et quand récolter.',
+      'Un plan prend ses graines dans le stock à la plantation (une par plant) et y rend ses têtes à la récolte (dix par plant), inscrites aussi dans la saisie journalière.',
+      'À droite de la carte, la liste des plans avec leur statut, le temps restant et la quantité.',
+      'Filtres par type de point, et rappel des plans à arroser ou prêts.',
+      'Accueil : nouvelle tuile « Jardinage » avec les plans en cours, leur statut et le temps restant.',
+      'L’onglet Event est retiré, l’event étant terminé. L’onglet Inventaire quitte le menu.',
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-10-10',
     changements: [

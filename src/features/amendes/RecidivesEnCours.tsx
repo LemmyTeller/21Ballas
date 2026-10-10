@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Card, Chargement, ErrorMessage } from '../../components/ui'
-import { categorieDelit, finRecidive, formatRestant, nomDelit, recidivesEnCours } from '../../lib/delits'
+import { categorieDelit, finRecidive, nomDelit, recidivesEnCours } from '../../lib/delits'
+import { formatRestant } from '../../lib/format'
 import { useMaintenant } from '../../lib/presence'
 import { useAmendes } from './useAmendes'
 

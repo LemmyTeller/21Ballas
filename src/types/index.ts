@@ -86,12 +86,28 @@ export interface Amende {
   createdAt: Timestamp | null
 }
 
-// Event « course au produit » en cours (document events/courant) : les items qui comptent et ce qu'ils rapportent.
-// Les quantités ne sont pas stockées ici : elles sont lues dans le Stock.
-export interface EventCourse {
+export type TypePoint = 'commerce' | 'plan' | 'interet' | 'danger'
+// Étapes de pousse d'un plan de récolte ; « prêt à récolter » se déduit de la fin de la floraison
+export type EtapePlan = 'germination' | 'croissance' | 'floraison'
+
+// Point posé sur la carte du serveur (onglet Map). Les champs propres à un type sont null pour les autres.
+export interface PointCarte {
+  id: string
+  type: TypePoint
+  // Position en fraction de la carte : 0 à gauche / en haut, 1 à droite / en bas
+  x: number
+  y: number
   nom: string
-  // Points par unité, par item (clé du catalogue, voir Reference)
-  points: Record<string, number>
+  commentaire: string
+  // Commerce : 'ballas', id d'un partenaire, ou null si le propriétaire est inconnu
+  proprietaireId: string | null
+  // Plan de récolte : nombre de plants, étape de pousse en cours et moment où elle a commencé
+  quantite: number | null
+  etape: EtapePlan | null
+  etapeDebut: Timestamp | null
+  creeParUid: string
+  createdAt: Timestamp | null
+  updatedAt: Timestamp | null
 }
 
 export interface Vehicule {

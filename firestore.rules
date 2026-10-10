@@ -119,6 +119,32 @@ service cloud.firestore {
         && shortString(data.note, 300);
     }
 
+    // Les types doivent rester alignés sur TYPES_POINT dans src/lib/carte.ts
+    function pointValide(data) {
+      return data.keys().hasOnly(
+               ['type', 'x', 'y', 'nom', 'commentaire', 'proprietaireId', 'quantite', 'etape', 'etapeDebut',
+                'creeParUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(
+               ['type', 'x', 'y', 'nom', 'commentaire', 'proprietaireId', 'quantite', 'etape', 'etapeDebut',
+                'creeParUid', 'createdAt', 'updatedAt'])
+        && data.type in ['commerce', 'plan', 'interet', 'danger']
+        // Position en fraction de la carte
+        && data.x is number && data.x >= 0 && data.x <= 1
+        && data.y is number && data.y >= 0 && data.y <= 1
+        && shortString(data.nom, 60)
+        && shortString(data.commentaire, 300)
+        && (data.proprietaireId == null || data.proprietaireId is string)
+        // Quantité et étape de pousse : pour un plan de récolte seulement
+        && (
+          data.type == 'plan'
+            ? (data.quantite is int && data.quantite >= 1 && data.quantite <= 100000
+               && data.etape in ['germination', 'croissance', 'floraison']
+               && data.etapeDebut is timestamp)
+            : (data.quantite == null && data.etape == null && data.etapeDebut == null)
+        )
+        && data.updatedAt == request.time;
+    }
+
     function lieuValide(data) {
       return data.keys().hasOnly(['nom', 'capacite', 'createdAt'])
         && data.keys().hasAll(['nom', 'capacite', 'createdAt'])
@@ -586,19 +612,47 @@ service cloud.firestore {
 
     // ---- Contrats : sommes que le groupe doit payer, avec une échéance ----
 
-    // ---- Event « course au produit » : un seul à la fois, dans events/courant ----
-    // Les gradés règlent le nom et les points par unité de chaque item ; les quantités viennent du Stock.
+    // ---- Map : points posés sur la carte du serveur ----
+    // Tout membre validé pose un point ; l'auteur et les gradés le modifient, le déplacent, le suppriment.
+    // Un plan de récolte avance d'étape en étape par arrosage, et se récolte (suppression) : ouvert à tous.
 
-    match /events/{id} {
+    match /pointsCarte/{id} {
       allow read: if isValide();
-      allow create, update: if isGrade()
-        && id == 'courant'
-        && request.resource.data.keys().hasOnly(['nom', 'points', 'updatedAt'])
-        && (!('nom' in request.resource.data) || shortString(request.resource.data.nom, 60))
-        && (!('points' in request.resource.data) || request.resource.data.points is map)
-        && request.resource.data.updatedAt == request.time;
-      // On vide l'event, on ne le supprime pas
-      allow delete: if false;
+
+      allow create: if isValide()
+        && pointValide(request.resource.data)
+        && request.resource.data.creeParUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        // Un plan naît en germination, à l'heure du serveur
+        && (request.resource.data.type != 'plan'
+            || (request.resource.data.etape == 'germination' && request.resource.data.etapeDebut == request.time));
+
+      allow update: if isValide()
+        && pointValide(request.resource.data)
+        && (
+          // Informations et position : l'auteur ou un gradé
+          (
+            (isGrade() || resource.data.creeParUid == request.auth.uid)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['x', 'y', 'nom', 'commentaire', 'proprietaireId', 'quantite', 'updatedAt'])
+          )
+          // Arrosage : uniquement l'étape suivante, une fois les 30 minutes de l'étape en cours écoulées
+          // (durée alignée sur DUREE_ETAPE_MS dans src/lib/carte.ts)
+          || (
+            resource.data.type == 'plan'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['etape', 'etapeDebut', 'updatedAt'])
+            && (
+              (resource.data.etape == 'germination' && request.resource.data.etape == 'croissance')
+              || (resource.data.etape == 'croissance' && request.resource.data.etape == 'floraison')
+            )
+            && request.resource.data.etapeDebut == request.time
+            && request.time >= resource.data.etapeDebut + duration.value(30, 'm')
+          )
+        );
+
+      // Récolter un plan le fait disparaître : tout membre validé
+      allow delete: if isValide()
+        && (isGrade() || resource.data.creeParUid == request.auth.uid || resource.data.type == 'plan');
     }
 
     // ---- Amendes : tout membre validé en note une, pour lui ou pour un autre ----
