@@ -86,6 +86,50 @@ export interface Amende {
   createdAt: Timestamp | null
 }
 
+// ---- Bizne$$ : la chaîne caisses → graines → plants → têtes → pochons (règles dans src/lib/biz.ts) ----
+
+// Commande de caisses de graines. Une caisse livrée peut être perdue : à la clôture on note combien ont été récupérées.
+export interface Caisse {
+  id: string
+  // Nombre de caisses commandées
+  quantite: number
+  statut: 'commandee' | 'close'
+  creeParUid: string
+  createdAt: Timestamp | null
+  // Renseignés à la clôture : caisses récupérées (les autres sont perdues) et lieu où sont entrées les graines
+  recuperees?: number
+  lieuId?: string | null
+  closParUid?: string
+  closAt?: Timestamp | null
+}
+
+// Lot de têtes posé sur l'établi : il devient des pochons au bout de `dureeSecondes`
+export interface Transformation {
+  id: string
+  tetes: number
+  dureeSecondes: number
+  debut: Timestamp | null
+  statut: 'en_cours' | 'recupere'
+  // Lieu d'où sont sorties les têtes ; null si le stock n'a pas été touché
+  lieuId: string | null
+  lanceParUid: string
+  createdAt: Timestamp | null
+  // Renseignés à la récupération
+  pochons?: number
+  lieuPochonsId?: string | null
+  recupereParUid?: string
+  recupereAt?: Timestamp | null
+}
+
+// Récolte d'un plan, notée au moment où il disparaît de la carte : sert au bilan
+export interface Recolte {
+  id: string
+  plants: number
+  tetes: number
+  parUid: string
+  createdAt: Timestamp | null
+}
+
 export type TypePoint = 'commerce' | 'plan' | 'interet' | 'danger'
 // Étapes de pousse d'un plan de récolte ; « prêt à récolter » se déduit de la fin de la floraison
 export type EtapePlan = 'germination' | 'croissance' | 'floraison'

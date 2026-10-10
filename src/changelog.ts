@@ -8,6 +8,17 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.8.0',
+    date: '2026-10-10',
+    changements: [
+      'Nouvel onglet Bizne$$ : toute la chaîne du business, des caisses de graines aux pochons.',
+      'Caisses : on commande, puis on note combien ont été récupérées ou perdues ; 10 graines par caisse entrent au stock.',
+      'Établi : un lot de têtes (500 au plus) devient des pochons après son décompte, 2 têtes pour 1 pochon.',
+      'Potentiel : ce que tout le stock engagé peut encore donner en pochons, et sa valeur au meilleur tarif.',
+      'Bilan sur 7 jours et depuis le début : caisses perdues, taux de réussite, têtes récoltées, pochons produits.',
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2026-10-10',
     changements: [

@@ -6,13 +6,12 @@ import {
   serverTimestamp,
   updateDoc,
   writeBatch,
-  type WriteBatch,
 } from 'firebase/firestore'
 import { REFERENCE_GRAINE, REFERENCE_TETE, TETES_PAR_PLANT, etapeSuivante } from '../../lib/carte'
 import { db } from '../../lib/firebase'
 import { jourDeSaisie } from '../../lib/journee'
 import type { Article, PointCarte, TypePoint } from '../../types'
-import { quantiteDans } from '../stock/useArticles'
+import { varierStock } from '../stock/mouvements'
 
 // Ce que la fenêtre de saisie renseigne ; les champs qui ne concernent pas le type sont ignorés
 export interface PointSaisie {
@@ -32,25 +31,6 @@ const champs = (type: TypePoint, saisie: PointSaisie) => ({
   commerceId: type === 'commerce' ? saisie.commerceId : null,
   quantite: type === 'plan' ? saisie.quantite : null,
 })
-
-// Fait varier un item dans le stock d'un lieu, dans une écriture groupée. Jamais sous zéro ; un item reçu qui
-// n'était pas encore suivi entre au Stock « Sans catégorie ».
-function varierStock(batch: WriteBatch, articles: Article[], reference: string, lieuId: string, delta: number) {
-  const article = articles.find((a) => a.id === reference)
-  if (article) {
-    batch.update(doc(db, 'articles', reference), {
-      [`quantites.${lieuId}`]: Math.max(0, quantiteDans(article, lieuId) + delta),
-      updatedAt: serverTimestamp(),
-    })
-  } else if (delta > 0) {
-    batch.set(doc(db, 'articles', reference), {
-      categorieId: '',
-      quantites: { [lieuId]: delta },
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  }
-}
 
 // Un plan de récolte naît en germination, à l'heure du serveur. Avec `stock`, ses graines (une par plant)
 // sortent du lieu choisi dans la même écriture.
@@ -99,11 +79,19 @@ export async function arroserPlan(point: PointCarte): Promise<void> {
 
 // Récolte : le plan disparaît de la carte et ses têtes (dix par plant) entrent dans la saisie journalière,
 // ainsi que dans le stock du lieu choisi (`lieuId` null : stock non touché), dans la même écriture.
-export async function recolterPlan(point: PointCarte, lieuId: string | null, articles: Article[]): Promise<void> {
-  const tetes = (point.quantite ?? 0) * TETES_PAR_PLANT
+export async function recolterPlan(
+  point: PointCarte,
+  lieuId: string | null,
+  articles: Article[],
+  parUid: string,
+): Promise<void> {
+  const plants = point.quantite ?? 0
+  const tetes = plants * TETES_PAR_PLANT
   const batch = writeBatch(db)
   batch.delete(doc(db, 'pointsCarte', point.id))
   if (tetes > 0) {
+    // Le plan disparaît : la récolte est notée à part, pour le bilan de l'onglet Bizne$$
+    batch.set(doc(collection(db, 'recoltes')), { plants, tetes, parUid, createdAt: serverTimestamp() })
     if (lieuId) varierStock(batch, articles, REFERENCE_TETE, lieuId, tetes)
     batch.set(
       doc(db, 'saisies', jourDeSaisie(Date.now())),

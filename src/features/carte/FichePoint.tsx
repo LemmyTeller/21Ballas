@@ -17,12 +17,15 @@ export function FichePoint({
   appartenance,
   auteur,
   peutGerer,
+  moiUid,
   lieux,
   articles,
   onModifier,
   onDeplacer,
   onClose,
 }: {
+  // Membre connecté : c'est lui qui signe une récolte
+  moiUid: string
   // Lieux de stockage et articles du Stock : la récolte d'un plan y fait entrer ses têtes
   lieux: Lieu[]
   articles: Article[]
@@ -153,7 +156,7 @@ export function FichePoint({
           </Button>
         )}
         {plan?.etat === 'pret' && (
-          <Button disabled={envoi} onClick={() => executer(() => recolterPlan(point, lieuId || null, articles))}>
+          <Button disabled={envoi} onClick={() => executer(() => recolterPlan(point, lieuId || null, articles, moiUid))}>
             Récolté
           </Button>
         )}

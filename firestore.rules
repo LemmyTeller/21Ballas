@@ -659,6 +659,92 @@ service cloud.firestore {
         && (isGrade() || resource.data.creeParUid == request.auth.uid || resource.data.type == 'plan');
     }
 
+    // ---- Bizne$$ : caisses de graines, lots à l'établi, journal des récoltes ----
+    // Le travail de tous les jours : tout membre validé commande, clôt, lance et récupère.
+    // Les chiffres du jeu doivent rester alignés sur src/lib/biz.ts.
+
+    match /caisses/{id} {
+      allow read: if isValide();
+
+      allow create: if isValide()
+        && request.resource.data.keys().hasOnly(['quantite', 'statut', 'creeParUid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['quantite', 'statut', 'creeParUid', 'createdAt'])
+        && request.resource.data.quantite is int
+        && request.resource.data.quantite >= 1
+        && request.resource.data.quantite <= 100
+        && request.resource.data.statut == 'commandee'
+        && request.resource.data.creeParUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      // Clôture : combien de caisses ont été récupérées, les autres sont perdues. Ensuite la commande est figée.
+      allow update: if isValide()
+        && resource.data.statut == 'commandee'
+        && request.resource.data.statut == 'close'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['statut', 'recuperees', 'lieuId', 'closParUid', 'closAt'])
+        && request.resource.data.recuperees is int
+        && request.resource.data.recuperees >= 0
+        && request.resource.data.recuperees <= resource.data.quantite
+        && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
+        && request.resource.data.closParUid == request.auth.uid
+        && request.resource.data.closAt == request.time;
+
+      // Commande passée par erreur : tant qu'elle est en attente
+      allow delete: if resource.data.statut == 'commandee'
+        && (isGrade() || (isValide() && resource.data.creeParUid == request.auth.uid));
+    }
+
+    match /transformations/{id} {
+      allow read: if isValide();
+
+      // Un lot : nombre pair de têtes, 500 au plus, 3 secondes par tête, démarré à l'heure du serveur
+      allow create: if isValide()
+        && request.resource.data.keys().hasOnly(
+             ['tetes', 'dureeSecondes', 'debut', 'statut', 'lieuId', 'lanceParUid', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['tetes', 'dureeSecondes', 'debut', 'statut', 'lieuId', 'lanceParUid', 'createdAt'])
+        && request.resource.data.tetes is int
+        && request.resource.data.tetes >= 2
+        && request.resource.data.tetes <= 500
+        && request.resource.data.tetes % 2 == 0
+        && request.resource.data.dureeSecondes == request.resource.data.tetes * 3
+        && request.resource.data.debut == request.time
+        && request.resource.data.statut == 'en_cours'
+        && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
+        && request.resource.data.lanceParUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      // Récupération : pas avant la fin du lot ; deux têtes donnent un pochon. Ensuite le lot est figé.
+      allow update: if isValide()
+        && resource.data.statut == 'en_cours'
+        && request.resource.data.statut == 'recupere'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['statut', 'pochons', 'lieuPochonsId', 'recupereParUid', 'recupereAt'])
+        && request.resource.data.pochons * 2 == resource.data.tetes
+        && (request.resource.data.lieuPochonsId == null || request.resource.data.lieuPochonsId is string)
+        && request.resource.data.recupereParUid == request.auth.uid
+        && request.resource.data.recupereAt == request.time
+        && request.time >= resource.data.debut + duration.value(resource.data.dureeSecondes, 's');
+
+      // Annulation d'un lot en cours
+      allow delete: if resource.data.statut == 'en_cours'
+        && (isGrade() || (isValide() && resource.data.lanceParUid == request.auth.uid));
+    }
+
+    // Écrit à la récolte d'un plan (onglet Map), puis figé : c'est la mémoire du bilan
+    match /recoltes/{id} {
+      allow read: if isValide();
+      allow create: if isValide()
+        && request.resource.data.keys().hasOnly(['plants', 'tetes', 'parUid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['plants', 'tetes', 'parUid', 'createdAt'])
+        && request.resource.data.plants is int
+        && request.resource.data.plants >= 1
+        && request.resource.data.tetes == request.resource.data.plants * 10
+        && request.resource.data.parUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
     // ---- Amendes : tout membre validé en note une, pour lui ou pour un autre ----
     // La récidive (24 h par joueur et par délit) se déduit de `date` : rien d'autre n'est stocké.
 

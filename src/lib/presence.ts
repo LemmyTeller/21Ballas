@@ -12,14 +12,15 @@ export function estPresent(membre: Pick<Membre, 'present' | 'presenceAt'>, maint
   return maintenant - membre.presenceAt.toMillis() < DUREE_PRESENCE_H * 3_600_000
 }
 
-// Heure courante, rafraîchie chaque minute pour faire expirer les présences à l'écran
-export function useMaintenant(): number {
+// Heure courante, rafraîchie chaque minute pour faire expirer les présences à l'écran.
+// Un intervalle plus court sert aux décomptes qui se jouent à la seconde près (lot à l'établi).
+export function useMaintenant(intervalleMs = 60_000): number {
   const [maintenant, setMaintenant] = useState(() => Date.now())
 
   useEffect(() => {
-    const id = setInterval(() => setMaintenant(Date.now()), 60_000)
+    const id = setInterval(() => setMaintenant(Date.now()), intervalleMs)
     return () => clearInterval(id)
-  }, [])
+  }, [intervalleMs])
 
   return maintenant
 }

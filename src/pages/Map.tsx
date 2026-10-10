@@ -248,6 +248,7 @@ export function MapPage() {
           appartenance={appartenance(fiche)}
           auteur={nomAffiche(membres.data.find((m) => m.uid === fiche.creeParUid))}
           peutGerer={estGrade || fiche.creeParUid === moi.uid}
+          moiUid={moi.uid}
           lieux={lieux.data}
           articles={articles.data}
           onModifier={() => {

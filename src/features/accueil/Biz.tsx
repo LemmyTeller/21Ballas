@@ -28,8 +28,8 @@ export function Biz() {
       className="p-4!"
       title="Biz"
       action={
-        <Link to="/stock" className="text-xs text-zinc-500 hover:text-purple-300">
-          Voir le stock
+        <Link to="/bizness" className="text-xs text-zinc-500 hover:text-purple-300">
+          Voir le biz
         </Link>
       }
     >

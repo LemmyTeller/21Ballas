@@ -817,6 +817,101 @@ describe('map : points de la carte', () => {
   })
 })
 
+describe('bizness : caisses, établi, récoltes', () => {
+  const ilYA = (minutes: number) => new Date(Date.now() - minutes * 60_000)
+  const commande = (par: string, modif: Record<string, unknown> = {}) => ({
+    quantite: 3,
+    statut: 'commandee',
+    creeParUid: par,
+    createdAt: serverTimestamp(),
+    ...modif,
+  })
+  const cloture = (par: string, recuperees: number) => ({
+    statut: 'close',
+    recuperees,
+    lieuId: 'qg',
+    closParUid: par,
+    closAt: serverTimestamp(),
+  })
+  const lot = (par: string, modif: Record<string, unknown> = {}) => ({
+    tetes: 20,
+    dureeSecondes: 60,
+    debut: serverTimestamp(),
+    statut: 'en_cours',
+    lieuId: 'qg',
+    lanceParUid: par,
+    createdAt: serverTimestamp(),
+    ...modif,
+  })
+  const recuperation = (par: string, pochons: number) => ({
+    statut: 'recupere',
+    pochons,
+    lieuPochonsId: 'qg',
+    recupereParUid: par,
+    recupereAt: serverTimestamp(),
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, 'caisses', 'c1'), { ...commande('violet'), createdAt: ilYA(10) })
+      // Lot de 20 têtes (une minute) : l'un terminé, l'autre tout juste lancé
+      await setDoc(doc(db, 'transformations', 'fini'), { ...lot('violet'), debut: ilYA(5), createdAt: ilYA(5) })
+      await setDoc(doc(db, 'transformations', 'frais'), { ...lot('violet'), debut: new Date(), createdAt: new Date() })
+    })
+  })
+
+  it('tout membre validé commande des caisses et clôt une commande', async () => {
+    await assertSucceeds(setDoc(doc(dbDe('noir'), 'caisses', 'a'), commande('noir')))
+    await assertFails(setDoc(doc(dbDe('attente'), 'caisses', 'b'), commande('attente')))
+    await assertFails(setDoc(doc(dbDe('noir'), 'caisses', 'c'), commande('noir', { quantite: 0 })))
+    await assertFails(setDoc(doc(dbDe('noir'), 'caisses', 'd'), commande('noir', { statut: 'close' })))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('noir', 4)))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('violet', 2)))
+    await assertSucceeds(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('noir', 2)))
+    // Close : figée, ni modifiable ni supprimable
+    await assertFails(updateDoc(doc(dbDe('n1'), 'caisses', 'c1'), cloture('n1', 3)))
+    await assertFails(deleteDoc(doc(dbDe('admin'), 'caisses', 'c1')))
+  })
+  it('une commande en attente se supprime par son auteur ou un gradé', async () => {
+    await assertFails(deleteDoc(doc(dbDe('noir'), 'caisses', 'c1')))
+    await assertSucceeds(deleteDoc(doc(dbDe('violet'), 'caisses', 'c1')))
+  })
+  it('un lot : nombre pair de têtes, 500 au plus, 3 secondes par tête', async () => {
+    const creer = (id: string, modif: Record<string, unknown> = {}) =>
+      setDoc(doc(dbDe('noir'), 'transformations', id), lot('noir', modif))
+    await assertSucceeds(creer('a'))
+    await assertSucceeds(creer('b', { tetes: 500, dureeSecondes: 1500 }))
+    await assertFails(creer('c', { tetes: 21, dureeSecondes: 63 }))
+    await assertFails(creer('d', { tetes: 502, dureeSecondes: 1506 }))
+    await assertFails(creer('e', { dureeSecondes: 1 }))
+    await assertFails(creer('f', { debut: ilYA(60) }))
+  })
+  it('les pochons ne se récupèrent qu’une fois le lot terminé, deux têtes pour un pochon', async () => {
+    await assertFails(updateDoc(doc(dbDe('noir'), 'transformations', 'frais'), recuperation('noir', 10)))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'transformations', 'fini'), recuperation('noir', 20)))
+    await assertSucceeds(updateDoc(doc(dbDe('noir'), 'transformations', 'fini'), recuperation('noir', 10)))
+    await assertFails(deleteDoc(doc(dbDe('admin'), 'transformations', 'fini')))
+  })
+  it('un lot en cours s’annule par celui qui l’a lancé ou un gradé', async () => {
+    await assertFails(deleteDoc(doc(dbDe('noir'), 'transformations', 'frais')))
+    await assertSucceeds(deleteDoc(doc(dbDe('n2'), 'transformations', 'frais')))
+  })
+  it('une récolte se note une fois, dix têtes par plant, et ne se retouche pas', async () => {
+    const recolte = (modif: Record<string, unknown> = {}) => ({
+      plants: 4,
+      tetes: 40,
+      parUid: 'noir',
+      createdAt: serverTimestamp(),
+      ...modif,
+    })
+    await assertSucceeds(setDoc(doc(dbDe('noir'), 'recoltes', 'r1'), recolte()))
+    await assertFails(setDoc(doc(dbDe('noir'), 'recoltes', 'r2'), recolte({ tetes: 400 })))
+    await assertFails(setDoc(doc(dbDe('noir'), 'recoltes', 'r3'), recolte({ parUid: 'violet' })))
+    await assertFails(deleteDoc(doc(dbDe('admin'), 'recoltes', 'r1')))
+  })
+})
+
 describe('amendes', () => {
   const amende = (par: string, modif: Record<string, unknown> = {}) => ({
     membreUid: 'noir',

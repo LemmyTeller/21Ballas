@@ -156,6 +156,29 @@ Onglet **Amendes**, ouvert à tous les membres validés. Il remplace le tableau 
   par l'auteur de la saisie, le joueur concerné ou Admin, N1, N2. Une amende ne peut pas être datée dans le futur.
 - L'accueil liste les récidives en cours, avec le temps restant.
 
+## Bizne$$
+
+Onglet **Bizne$$**, ouvert à tous les membres validés : la chaîne du business, de la caisse de graines au pochon.
+Les chiffres du jeu sont dans `src/lib/biz.ts` et `src/lib/carte.ts`, et repris dans `firestore.rules`.
+
+| Étape | Règle | Où |
+|---|---|---|
+| Caisse | gratuite, peut être perdue ; 10 graines par caisse récupérée | `caisses` |
+| Culture | 1 graine par plant, 10 têtes par plant | plans de récolte de l'onglet Map (`pointsCarte`) |
+| Établi | 2 têtes = 1 pochon, 3 s par tête, 500 têtes au plus, un seul lot à la fois | `transformations` |
+| Vente | pochons vendus par Tarifs et Transactions | `tarifs`, `commandes` |
+
+- **Caisses** : une commande reste en attente jusqu'à sa clôture, où l'on note combien de caisses ont été récupérées
+  (les autres sont perdues). Les graines entrent au stock du lieu choisi et dans la saisie journalière.
+- **Établi** : lancer un lot sort ses têtes du stock ; il se récupère une fois `dureeSecondes` écoulées depuis `debut`
+  (les règles le refusent avant), et ses pochons entrent au stock. Annuler un lot en cours rend les têtes.
+  « Un seul lot à la fois » est tenu par l'interface, pas par les règles.
+- **Récoltes** : `recoltes` garde une ligne par plan récolté, écrite depuis l'onglet Map ; c'est ce qui alimente le bilan,
+  puisqu'un plan récolté disparaît de la carte.
+- **Potentiel** : tout ce qui est engagé, converti en pochons, puis chiffré au meilleur prix de vente du pochon des Tarifs.
+- Tout membre validé fait tourner la chaîne ; l'auteur ou un gradé annule un lot ou supprime une commande en attente ;
+  ce qui est clos ne se modifie plus.
+
 ## Map
 
 Onglet **Map**, ouvert à tous les membres validés : la carte du serveur (avec les zips) et les points du groupe.

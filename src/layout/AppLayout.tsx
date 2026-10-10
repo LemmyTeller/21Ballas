@@ -13,6 +13,7 @@ import type { Role } from '../types'
 
 const LIENS: { to: string; label: string; minimum: Role; admin?: boolean }[] = [
   { to: '/', label: 'Accueil', minimum: 'membre' },
+  { to: '/bizness', label: 'Bizne$$', minimum: 'membre' },
   { to: '/membres', label: 'Membres', minimum: 'membre' },
   { to: '/gestion', label: 'Gestion', minimum: 'membre' },
   { to: '/stock', label: 'Stock', minimum: 'membre' },
@@ -32,6 +33,7 @@ const LIENS: { to: string; label: string; minimum: Role; admin?: boolean }[] = [
 const LARGEURS: Record<string, string> = {
   // L'accueil porte beaucoup d'encarts : il s'étale presque sur toute la largeur de l'écran
   '/': 'max-w-[120rem]',
+  '/bizness': 'max-w-[110rem]',
   '/tarifs': 'max-w-7xl',
   '/transactions': 'max-w-7xl',
   '/annuaire': 'max-w-7xl',

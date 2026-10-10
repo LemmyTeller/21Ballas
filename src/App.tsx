@@ -10,6 +10,7 @@ import { auth } from './lib/firebase'
 import { Accueil } from './pages/Accueil'
 import { Amendes } from './pages/Amendes'
 import { Annuaire } from './pages/Annuaire'
+import { Bizness } from './pages/Bizness'
 import { Blanchiment } from './pages/Blanchiment'
 import { Carjacking } from './pages/Carjacking'
 import { Commerce } from './pages/Commerce'
@@ -50,6 +51,7 @@ function Portail() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<Accueil />} />
+          <Route path="bizness" element={<Bizness />} />
           <Route path="membres" element={<Membres />} />
           <Route path="gestion" element={<Gestion />} />
           <Route path="stock" element={<Stock />} />
