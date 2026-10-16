@@ -12,6 +12,7 @@ import { useAnnonces } from '../features/annonces/useAnnonces'
 import { BlanchimentsEnCours } from '../features/blanchiment/BlanchimentsEnCours'
 import { Contrats } from '../features/contrats/Contrats'
 import { basculerPresence } from '../features/members/api'
+import { BoutonCopierListe } from '../features/members/BoutonCopierListe'
 import { useMembres } from '../features/members/useMembres'
 import { SaisieJournaliere } from '../features/saisie/SaisieJournaliere'
 import { Taches } from '../features/taches/Taches'
@@ -226,9 +227,12 @@ function Joueurs({ moi, membres }: { moi: Membre; membres: Membre[] }) {
       className="p-4!"
       title={`${presents} / ${joueurs.length}`}
       action={
-        <Button variant={jeSuisPresent ? 'ghost' : 'primary'} onClick={basculer}>
-          {jeSuisPresent ? 'Je ne suis plus présent' : 'Je suis présent'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <BoutonCopierListe membres={membres} icone />
+          <Button variant={jeSuisPresent ? 'ghost' : 'primary'} onClick={basculer}>
+            {jeSuisPresent ? 'Je ne suis plus présent' : 'Je suis présent'}
+          </Button>
+        </div>
       }
     >
       <ErrorMessage>{erreur}</ErrorMessage>

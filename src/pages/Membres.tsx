@@ -10,6 +10,7 @@ import {
   revoquer,
   supprimerJoueur,
 } from '../features/members/api'
+import { BoutonCopierListe } from '../features/members/BoutonCopierListe'
 import { SortieModal } from '../features/members/SortieModal'
 import { useMembres } from '../features/members/useMembres'
 import {
@@ -57,11 +58,14 @@ export function Membres() {
 
   return (
     <>
-      <header>
-        <h1 className="text-2xl font-bold text-zinc-50">Membres</h1>
-        <p className="text-sm text-zinc-400">
-          {valides.length} membre{valides.length > 1 ? 's' : ''} dans le groupe
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-50">Membres</h1>
+          <p className="text-sm text-zinc-400">
+            {valides.length} membre{valides.length > 1 ? 's' : ''} dans le groupe
+          </p>
+        </div>
+        <BoutonCopierListe membres={valides} />
       </header>
 
       <ErrorMessage>{error ?? erreurAction}</ErrorMessage>

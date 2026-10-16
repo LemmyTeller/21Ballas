@@ -8,6 +8,14 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.13.0',
+    date: '2026-10-16',
+    changements: [
+      'Membres : le bouton « Copier la liste » met l’effectif dans le presse-papiers, une ligne par membre (nom, grade pour N1 et N2, numéro sans 555-).',
+      'Le même bouton, en icône, se trouve dans la liste de présence de l’accueil.',
+    ],
+  },
+  {
     version: '1.12.0',
     date: '2026-10-16',
     changements: ['Accueil : la liste de présence affiche le numéro de téléphone de chaque membre.'],
