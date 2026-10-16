@@ -238,7 +238,13 @@ function Joueurs({ moi, membres }: { moi: Membre; membres: Membre[] }) {
             <Avatar name={nomAffiche(membre)} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-zinc-100">{nomAffiche(membre)}</p>
-              <RoleBadge role={membre.role} />
+              {/* Grade et numéro RP, sur une même ligne */}
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <RoleBadge role={membre.role} />
+                {membre.telephoneRP && (
+                  <span className="text-xs whitespace-nowrap text-zinc-400 tabular-nums">{membre.telephoneRP}</span>
+                )}
+              </p>
             </div>
             <div className="text-right text-sm">
               <p className={present ? 'font-medium text-emerald-400' : 'text-zinc-500'}>
