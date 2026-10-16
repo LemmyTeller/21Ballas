@@ -696,12 +696,16 @@ service cloud.firestore {
         && request.resource.data.creeParUid == request.auth.uid
         && request.resource.data.createdAt == request.time;
 
-      // Clôture : combien de caisses ont été récupérées, les autres sont perdues. Ensuite la commande est figée.
+      // Clôture : combien de graines ont été récupérées (10 par caisse au plus), les autres sont perdues.
+      // `recuperees` : les caisses vidées en entier. Ensuite la commande est figée.
       allow update: if isValide()
         && resource.data.statut == 'commandee'
         && request.resource.data.statut == 'close'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-             ['statut', 'recuperees', 'lieuId', 'closParUid', 'closAt'])
+             ['statut', 'graines', 'recuperees', 'lieuId', 'closParUid', 'closAt'])
+        && request.resource.data.graines is int
+        && request.resource.data.graines >= 0
+        && request.resource.data.graines <= resource.data.quantite * 10
         && request.resource.data.recuperees is int
         && request.resource.data.recuperees >= 0
         && request.resource.data.recuperees <= resource.data.quantite

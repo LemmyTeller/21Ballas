@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { Button, ErrorMessage, inputClass } from '../../components/ui'
-import { GRAINES_PAR_CAISSE } from '../../lib/biz'
+import { GRAINES_PAR_CAISSE, grainesAttendues } from '../../lib/biz'
 import { formatNombre } from '../../lib/format'
 import type { Article, Caisse, Lieu } from '../../types'
 import { cloreCaisses, commanderCaisses } from './api'
 
-// Sans `caisse` : nouvelle commande de caisses. Avec : sa clôture, où l'on note combien de caisses ont été
-// récupérées (les autres sont perdues) et où vont les graines.
+// Sans `caisse` : nouvelle commande de caisses. Avec : sa clôture, où l'on note combien de graines ont été
+// récupérées (une caisse se vide graine par graine, on peut être interrompu) et où elles vont.
 export function CaisseModal({
   caisse,
   lieux,
@@ -21,13 +21,16 @@ export function CaisseModal({
   acteurUid: string
   onClose: () => void
 }) {
-  const [quantite, setQuantite] = useState(caisse ? String(caisse.quantite) : '1')
+  const attendues = caisse ? grainesAttendues(caisse) : 0
+  // Commande : nombre de caisses. Clôture : nombre de graines, toutes par défaut.
+  const [quantite, setQuantite] = useState(caisse ? String(attendues) : '1')
   const [lieuId, setLieuId] = useState(lieux[0]?.id ?? '')
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
   const nombre = Math.trunc(Number(quantite))
-  const valide = quantite !== '' && (caisse ? nombre >= 0 && nombre <= caisse.quantite : nombre >= 1 && nombre <= 100)
+  const valide = quantite !== '' && (caisse ? nombre >= 0 && nombre <= attendues : nombre >= 1 && nombre <= 100)
+  const perdues = attendues - nombre
 
   async function enregistrer(e: FormEvent) {
     e.preventDefault()
@@ -49,19 +52,33 @@ export function CaisseModal({
       <form onSubmit={enregistrer} className="space-y-3">
         <label className="block space-y-1 text-sm">
           <span className="text-zinc-400">
-            {caisse ? `Caisses récupérées, sur ${caisse.quantite} commandée${caisse.quantite > 1 ? 's' : ''}` : 'Nombre de caisses'}
+            {caisse
+              ? `Graines récupérées, sur ${attendues} (${caisse.quantite} caisse${caisse.quantite > 1 ? 's' : ''})`
+              : 'Nombre de caisses'}
           </span>
-          <input
-            type="number"
-            className={inputClass}
-            value={quantite}
-            min={caisse ? 0 : 1}
-            max={caisse ? caisse.quantite : 100}
-            step={1}
-            required
-            autoFocus
-            onChange={(e) => setQuantite(e.target.value)}
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              className={inputClass}
+              value={quantite}
+              min={caisse ? 0 : 1}
+              max={caisse ? attendues : 100}
+              step={1}
+              required
+              autoFocus
+              onChange={(e) => setQuantite(e.target.value)}
+            />
+            {caisse && (
+              <>
+                <Button variant="ghost" onClick={() => setQuantite(String(attendues))}>
+                  Tout
+                </Button>
+                <Button variant="ghost" onClick={() => setQuantite('0')}>
+                  Rien
+                </Button>
+              </>
+            )}
+          </div>
         </label>
 
         {caisse ? (
@@ -79,26 +96,24 @@ export function CaisseModal({
             </label>
             {valide && (
               <p className="text-sm text-zinc-300">
-                <span className="font-semibold text-emerald-400">
-                  +{formatNombre(nombre * GRAINES_PAR_CAISSE)} graines de weed
-                </span>
-                {caisse.quantite - nombre > 0 && (
+                <span className="font-semibold text-emerald-400">+{formatNombre(nombre)} graines de weed</span>
+                {perdues > 0 && (
                   <span className="text-red-300">
                     {' '}
-                    · {caisse.quantite - nombre} caisse{caisse.quantite - nombre > 1 ? 's' : ''} perdue
-                    {caisse.quantite - nombre > 1 ? 's' : ''}
+                    · {formatNombre(perdues)} graine{perdues > 1 ? 's' : ''} perdue{perdues > 1 ? 's' : ''}
                   </span>
                 )}
               </p>
             )}
             <p className="text-xs text-zinc-500">
-              Une fois close, la commande part dans l’historique et ne se modifie plus.
+              Compte les graines réellement sorties des caisses, même si tu as été interrompu en cours de route. Une
+              fois close, la commande part dans l’historique et ne se modifie plus.
             </p>
           </>
         ) : (
           <p className="text-xs text-zinc-500">
-            {GRAINES_PAR_CAISSE} graines par caisse récupérée. La commande reste en attente jusqu’à ce que tu indiques
-            combien de caisses sont arrivées.
+            {GRAINES_PAR_CAISSE} graines par caisse. La commande reste en attente jusqu’à ce que tu indiques combien de
+            graines ont été récupérées.
           </p>
         )}
 

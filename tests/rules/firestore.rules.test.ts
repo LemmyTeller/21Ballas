@@ -862,9 +862,11 @@ describe('bizness : caisses, établi, récoltes', () => {
     createdAt: serverTimestamp(),
     ...modif,
   })
-  const cloture = (par: string, recuperees: number) => ({
+  // Clôture en graines : une caisse (10 graines) peut n'être vidée qu'en partie
+  const cloture = (par: string, graines: number) => ({
     statut: 'close',
-    recuperees,
+    graines,
+    recuperees: Math.floor(graines / 10),
     lieuId: 'qg',
     closParUid: par,
     closAt: serverTimestamp(),
@@ -902,11 +904,14 @@ describe('bizness : caisses, établi, récoltes', () => {
     await assertFails(setDoc(doc(dbDe('attente'), 'caisses', 'b'), commande('attente')))
     await assertFails(setDoc(doc(dbDe('noir'), 'caisses', 'c'), commande('noir', { quantite: 0 })))
     await assertFails(setDoc(doc(dbDe('noir'), 'caisses', 'd'), commande('noir', { statut: 'close' })))
-    await assertFails(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('noir', 4)))
-    await assertFails(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('violet', 2)))
-    await assertSucceeds(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('noir', 2)))
+    // 3 caisses commandées : 30 graines au plus
+    await assertFails(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('noir', 31)))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('violet', 12)))
+    await assertFails(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), { ...cloture('noir', 12), graines: 1.5 }))
+    // Interrompu en route : 12 graines sur 30
+    await assertSucceeds(updateDoc(doc(dbDe('noir'), 'caisses', 'c1'), cloture('noir', 12)))
     // Close : figée, ni modifiable ni supprimable
-    await assertFails(updateDoc(doc(dbDe('n1'), 'caisses', 'c1'), cloture('n1', 3)))
+    await assertFails(updateDoc(doc(dbDe('n1'), 'caisses', 'c1'), cloture('n1', 30)))
     await assertFails(deleteDoc(doc(dbDe('admin'), 'caisses', 'c1')))
   })
   it('une commande en attente se supprime par son auteur ou un gradé', async () => {

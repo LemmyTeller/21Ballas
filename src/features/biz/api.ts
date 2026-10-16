@@ -17,20 +17,22 @@ export async function commanderCaisses(quantite: number, creeParUid: string): Pr
   })
 }
 
-// Clôture d'une commande : `recuperees` caisses sont arrivées, les autres sont perdues. Les graines des caisses
-// récupérées entrent dans la saisie journalière et, si un lieu est choisi, dans son stock, dans la même écriture.
+// Clôture d'une commande : `graines` graines ont été récupérées, les autres sont perdues (caisse jamais atteinte,
+// ou vidée en partie seulement). Elles entrent dans la saisie journalière et, si un lieu est choisi, dans son stock,
+// dans la même écriture.
 export async function cloreCaisses(
   caisse: Caisse,
-  recuperees: number,
+  graines: number,
   lieuId: string | null,
   acteurUid: string,
   articles: Article[],
 ): Promise<void> {
-  const graines = recuperees * GRAINES_PAR_CAISSE
   const batch = writeBatch(db)
   batch.update(doc(db, 'caisses', caisse.id), {
     statut: 'close',
-    recuperees,
+    graines,
+    // Caisses vidées en entier
+    recuperees: Math.floor(graines / GRAINES_PAR_CAISSE),
     lieuId,
     closParUid: acteurUid,
     closAt: serverTimestamp(),

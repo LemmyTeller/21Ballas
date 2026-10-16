@@ -178,8 +178,9 @@ Les chiffres du jeu sont dans `src/lib/biz.ts` et `src/lib/carte.ts`, et repris 
 | Établi | 2 têtes = 1 pochon, 3 s par tête, 500 têtes au plus, un seul lot à la fois | `transformations` |
 | Vente | pochons vendus par Tarifs et Transactions | `tarifs`, `commandes` |
 
-- **Caisses** : une commande reste en attente jusqu'à sa clôture, où l'on note combien de caisses ont été récupérées
-  (les autres sont perdues). Les graines entrent au stock du lieu choisi et dans la saisie journalière.
+- **Caisses** : une commande reste en attente jusqu'à sa clôture, où l'on note combien de **graines** ont été récupérées
+  (`graines`, de 0 à 10 par caisse) : une caisse se vide graine par graine et on peut être interrompu. Les autres sont perdues.
+  Les graines entrent au stock du lieu choisi et dans la saisie journalière. Le taux de réussite se compte en graines.
 - **Établi** : lancer un lot sort ses têtes du stock ; il se récupère une fois `dureeSecondes` écoulées depuis `debut`
   (les règles le refusent avant), et ses pochons entrent au stock. Annuler un lot en cours rend les têtes.
   « Un seul lot à la fois » est tenu par l'interface, pas par les règles.

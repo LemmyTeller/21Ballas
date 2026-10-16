@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Colonnes } from '../../components/Colonnes'
 import { Card, ErrorMessage } from '../../components/ui'
-import { GRAINES_PAR_CAISSE, REFERENCE_POCHON } from '../../lib/biz'
+import { REFERENCE_POCHON, grainesAttendues, grainesRecuperees } from '../../lib/biz'
 import { formatNombre, formatPrix } from '../../lib/format'
 import { COULEURS_SERIES } from '../../lib/graphiques'
 import { jourDeSaisie } from '../../lib/journee'
@@ -56,8 +56,9 @@ export function Graph({
     lignes.filter((l) => l.sens === 'vente' && l.reference === REFERENCE_POCHON).reduce((total, l) => total + l.quantite, 0)
 
   const mesures = {
-    recuperees: parJour(closes, (c) => c.closAt, (c) => c.recuperees ?? 0),
-    perdues: parJour(closes, (c) => c.closAt, (c) => c.quantite - (c.recuperees ?? 0)),
+    // En graines : une caisse peut n'être vidée qu'en partie
+    recuperees: parJour(closes, (c) => c.closAt, grainesRecuperees),
+    perdues: parJour(closes, (c) => c.closAt, (c) => grainesAttendues(c) - grainesRecuperees(c)),
     tetes: parJour(recoltes, (r) => r.createdAt, (r) => r.tetes),
     produits: parJour(
       lots.filter((l) => l.statut === 'recupere'),
@@ -71,8 +72,8 @@ export function Graph({
   const total = (cle: keyof typeof mesures, liste = jours) => somme(serie(mesures[cle], liste))
   const reussite = (liste: string[]) => {
     const recuperees = total('recuperees', liste)
-    const commandees = recuperees + total('perdues', liste)
-    return commandees > 0 ? Math.round((recuperees / commandees) * 100) : null
+    const attendues = recuperees + total('perdues', liste)
+    return attendues > 0 ? Math.round((recuperees / attendues) * 100) : null
   }
 
   return (
@@ -101,7 +102,7 @@ export function Graph({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Indicateur
-          label="Réussite des caisses"
+          label="Graines récupérées sur attendues"
           valeur={reussite(jours)}
           avant={reussite(joursAvant)}
           format={(v) => `${v} %`}
@@ -110,8 +111,8 @@ export function Graph({
         />
         <Indicateur
           label="Graines reçues"
-          valeur={total('recuperees') * GRAINES_PAR_CAISSE}
-          avant={total('recuperees', joursAvant) * GRAINES_PAR_CAISSE}
+          valeur={total('recuperees')}
+          avant={total('recuperees', joursAvant)}
           format={formatNombre}
           periode={periode}
         />
@@ -137,7 +138,7 @@ export function Graph({
           periode={periode}
         />
         <Indicateur
-          label="Caisses perdues"
+          label="Graines perdues"
           valeur={total('perdues')}
           avant={total('perdues', joursAvant)}
           format={formatNombre}
@@ -162,7 +163,7 @@ export function Graph({
 
       <div className="grid items-start gap-4 xl:grid-cols-2">
         <Colonnes
-          titre="Caisses par jour"
+          titre="Graines des caisses, par jour"
           etiquettes={etiquettes}
           format={formatNombre}
           series={[

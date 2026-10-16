@@ -13,7 +13,15 @@ import { useMembres } from '../features/members/useMembres'
 import { quantiteTotale } from '../features/stock/mouvements'
 import { useArticles } from '../features/stock/useArticles'
 import { useTarifs } from '../features/tarifs/useTarifs'
-import { GRAINES_PAR_CAISSE, REFERENCE_POCHON, TETES_PAR_POCHON, finLot, pochonsPour } from '../lib/biz'
+import {
+  GRAINES_PAR_CAISSE,
+  REFERENCE_POCHON,
+  TETES_PAR_POCHON,
+  finLot,
+  grainesAttendues,
+  grainesRecuperees,
+  pochonsPour,
+} from '../lib/biz'
 import { REFERENCE_GRAINE, REFERENCE_TETE, TETES_PAR_PLANT, etatPlan } from '../lib/carte'
 import { formatNombre, formatPrix, formatRestant } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
@@ -99,13 +107,14 @@ export function Bizness() {
   const bilan = (depuis: number) => {
     const periode = (ts: { toMillis: () => number } | null | undefined) => (ts?.toMillis() ?? maintenant) >= depuis
     const cs = closes.filter((c) => periode(c.closAt))
-    const commandees = cs.reduce((total, c) => total + c.quantite, 0)
-    const recuperees = cs.reduce((total, c) => total + (c.recuperees ?? 0), 0)
+    // Le succès se compte en graines : une caisse peut n'être vidée qu'en partie
+    const attendues = cs.reduce((total, c) => total + grainesAttendues(c), 0)
+    const recuperees = cs.reduce((total, c) => total + grainesRecuperees(c), 0)
     return {
-      commandees,
+      commandees: cs.reduce((total, c) => total + c.quantite, 0),
       recuperees,
-      perdues: commandees - recuperees,
-      reussite: commandees > 0 ? Math.round((recuperees / commandees) * 100) : null,
+      perdues: attendues - recuperees,
+      reussite: attendues > 0 ? Math.round((recuperees / attendues) * 100) : null,
       tetes: recoltes.data.filter((r) => periode(r.createdAt)).reduce((total, r) => total + r.tetes, 0),
       pochons: recuperes.filter((l) => periode(l.recupereAt)).reduce((total, l) => total + (l.pochons ?? 0), 0),
     }
@@ -118,8 +127,8 @@ export function Bizness() {
     ...closes.map((c) => ({
       id: c.id,
       date: c.closAt,
-      texte: `${c.quantite} caisse${c.quantite > 1 ? 's' : ''} : ${c.recuperees ?? 0} récupérée${(c.recuperees ?? 0) > 1 ? 's' : ''}, ${c.quantite - (c.recuperees ?? 0)} perdue${c.quantite - (c.recuperees ?? 0) > 1 ? 's' : ''}`,
-      gain: `+${formatNombre((c.recuperees ?? 0) * GRAINES_PAR_CAISSE)} graines`,
+      texte: `${c.quantite} caisse${c.quantite > 1 ? 's' : ''} : ${grainesRecuperees(c)} graines sur ${grainesAttendues(c)}`,
+      gain: `+${formatNombre(grainesRecuperees(c))} graines`,
       par: c.closParUid,
     })),
     ...recuperes.map((l) => ({
@@ -363,8 +372,8 @@ export function Bizness() {
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   <LigneBilan titre="Caisses commandées" a={semaine.commandees} b={tout.commandees} />
-                  <LigneBilan titre="Caisses récupérées" a={semaine.recuperees} b={tout.recuperees} />
-                  <LigneBilan titre="Caisses perdues" a={semaine.perdues} b={tout.perdues} classe="text-red-300" />
+                  <LigneBilan titre="Graines récupérées" a={semaine.recuperees} b={tout.recuperees} />
+                  <LigneBilan titre="Graines perdues" a={semaine.perdues} b={tout.perdues} classe="text-red-300" />
                   <tr>
                     <td className="py-1.5 text-zinc-300">Taux de réussite</td>
                     <td className="py-1.5 text-right font-medium text-zinc-100 tabular-nums">

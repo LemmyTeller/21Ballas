@@ -8,6 +8,14 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.11.0',
+    date: '2026-10-10',
+    changements: [
+      'Bizne$$ : une commande de caisses se clôt en nombre de graines récupérées, pour le cas où une caisse n’a pu être vidée qu’en partie.',
+      'Le bilan compte les graines récupérées et perdues, et le taux de réussite se calcule sur les graines.',
+    ],
+  },
+  {
     version: '1.10.0',
     date: '2026-10-10',
     changements: [

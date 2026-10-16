@@ -88,7 +88,8 @@ export interface Amende {
 
 // ---- Bizne$$ : la chaîne caisses → graines → plants → têtes → pochons (règles dans src/lib/biz.ts) ----
 
-// Commande de caisses de graines. Une caisse livrée peut être perdue : à la clôture on note combien ont été récupérées.
+// Commande de caisses de graines. Une caisse livrée peut être perdue, en tout ou en partie (elle se vide graine par
+// graine) : à la clôture on note combien de graines ont été récupérées.
 export interface Caisse {
   id: string
   // Nombre de caisses commandées
@@ -96,7 +97,9 @@ export interface Caisse {
   statut: 'commandee' | 'close'
   creeParUid: string
   createdAt: Timestamp | null
-  // Renseignés à la clôture : caisses récupérées (les autres sont perdues) et lieu où sont entrées les graines
+  // Renseignés à la clôture : graines récupérées (les autres sont perdues) et lieu où elles sont entrées.
+  // `recuperees` : nombre de caisses vidées en entier ; seul champ des premières clôtures, sans `graines`.
+  graines?: number
   recuperees?: number
   lieuId?: string | null
   closParUid?: string
