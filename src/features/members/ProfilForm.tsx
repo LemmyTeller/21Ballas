@@ -5,6 +5,7 @@ import { majProfil } from './api'
 
 export function ProfilForm({ membre }: { membre: Membre }) {
   const [nomRP, setNomRP] = useState(membre.nomRP)
+  const [surnomRP, setSurnomRP] = useState(membre.surnomRP ?? '')
   const [telephoneRP, setTelephoneRP] = useState(membre.telephoneRP)
   const [anniversaireRP, setAnniversaireRP] = useState(membre.anniversaireRP ?? '')
   const [etat, setEtat] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -15,7 +16,7 @@ export function ProfilForm({ membre }: { membre: Membre }) {
     setEtat('saving')
     setErreur(null)
     try {
-      await majProfil(membre.uid, { nomRP, telephoneRP, anniversaireRP })
+      await majProfil(membre.uid, { nomRP, surnomRP, telephoneRP, anniversaireRP })
       setEtat('saved')
     } catch (err) {
       setErreur((err as Error).message)
@@ -34,6 +35,19 @@ export function ProfilForm({ membre }: { membre: Membre }) {
           required
           onChange={(e) => {
             setNomRP(e.target.value)
+            setEtat('idle')
+          }}
+        />
+      </label>
+      <label className="block space-y-1 text-sm">
+        <span className="text-zinc-400">Surnom (facultatif, sinon ton prénom RP est utilisé)</span>
+        <input
+          className={inputClass}
+          value={surnomRP}
+          maxLength={30}
+          placeholder={nomRP.trim().split(/\s+/)[0] || undefined}
+          onChange={(e) => {
+            setSurnomRP(e.target.value)
             setEtat('idle')
           }}
         />

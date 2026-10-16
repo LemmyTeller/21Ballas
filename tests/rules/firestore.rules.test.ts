@@ -137,6 +137,15 @@ describe('users : lecture', () => {
 describe('users : profil et présence', () => {
   it('chacun modifie son profil RP', async () => {
     await assertSucceeds(updateDoc(doc(dbDe('attente'), 'users', 'attente'), { nomRP: 'Jamal', telephoneRP: '555' }))
+    await assertSucceeds(updateDoc(doc(dbDe('attente'), 'users', 'attente'), { surnomRP: 'Jay' }))
+    await assertFails(updateDoc(doc(dbDe('attente'), 'users', 'attente'), { surnomRP: 'x'.repeat(31) }))
+    await assertFails(updateDoc(doc(dbDe('n1'), 'users', 'noir'), { surnomRP: 'Faux' }))
+  })
+  it('un admin corrige le surnom d’un autre, et rien d’autre avec', async () => {
+    await assertSucceeds(updateDoc(doc(dbDe('cache'), 'users', 'noir'), { surnomRP: 'Le Noir' }))
+    await assertSucceeds(updateDoc(doc(dbDe('admin'), 'users', 'noir'), { surnomRP: '' }))
+    await assertFails(updateDoc(doc(dbDe('cache'), 'users', 'noir'), { surnomRP: 'Le Noir', nomRP: 'Faux' }))
+    await assertFails(updateDoc(doc(dbDe('cache'), 'users', 'noir'), { surnomRP: 'x'.repeat(31) }))
   })
   it('chacun déclare sa propre présence, à l’heure du serveur', async () => {
     const moi = doc(dbDe('noir'), 'users', 'noir')

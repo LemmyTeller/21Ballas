@@ -12,6 +12,8 @@ export type RaisonSortie = RaisonRevocation | RaisonSuppression
 export interface Membre {
   uid: string
   nomRP: string
+  // Surnom du personnage ; vide ou absent : c'est son prénom qui sert (voir surnomAffiche)
+  surnomRP?: string
   telephoneRP: string
   // Anniversaire du personnage, au format JJ/MM
   anniversaireRP?: string

@@ -8,6 +8,15 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.14.0',
+    date: '2026-10-16',
+    changements: [
+      'Profil : nouveau champ « Surnom », dès le formulaire d’inscription. Sans surnom, c’est le prénom RP qui sert.',
+      'Membres : colonne « Surnom », corrigeable par l’administration.',
+      'La copie de la liste des membres utilise le surnom au lieu du nom complet.',
+    ],
+  },
+  {
     version: '1.13.0',
     date: '2026-10-16',
     changements: [

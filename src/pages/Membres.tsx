@@ -7,6 +7,7 @@ import {
   definirAdmin,
   lireDroitAdmin,
   lireEmailPrive,
+  modifierSurnom,
   revoquer,
   supprimerJoueur,
 } from '../features/members/api'
@@ -23,6 +24,7 @@ import {
   peutGerer,
   rang,
   rolesAttribuables,
+  surnomAffiche,
 } from '../lib/roles'
 import { RAISON_LABELS, RAISONS_REVOCATION, RAISONS_SUPPRESSION, estSuppression } from '../lib/sorties'
 import type { Membre, RaisonSortie, Role } from '../types'
@@ -103,6 +105,7 @@ export function Membres() {
               <thead className="text-xs uppercase tracking-wide text-zinc-500">
                 <tr>
                   <th className="pb-2 font-medium">Membre</th>
+                  <th className="pb-2 font-medium">Surnom</th>
                   <th className="pb-2 font-medium">Téléphone</th>
                   <th className="pb-2 font-medium">Grade</th>
                   <th className="pb-2 font-medium">Arrivée</th>
@@ -115,6 +118,32 @@ export function Membres() {
                   <tr key={m.uid}>
                     <td className="py-2.5 pr-4">
                       <Identite membre={m} avecEmail={estAdmin} />
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      {/* Sans surnom, c'est le prénom qui sert : affiché en retrait. Un admin le corrige d'un clic,
+                          sauf le sien, qu'il change dans ses Paramètres comme tout le monde. */}
+                      {estAdmin && m.uid !== moi.uid ? (
+                        <button
+                          type="button"
+                          title="Modifier le surnom"
+                          className={`rounded px-1 -mx-1 hover:bg-zinc-800 ${
+                            m.surnomRP?.trim() ? 'text-zinc-100' : 'text-zinc-500 italic'
+                          }`}
+                          onClick={() => {
+                            const surnom = window.prompt(
+                              `Surnom de ${nomAffiche(m)} (vide : son prénom RP)`,
+                              m.surnomRP ?? '',
+                            )
+                            if (surnom !== null) executer(() => modifierSurnom(m.uid, surnom))
+                          }}
+                        >
+                          {surnomAffiche(m)} <span className="text-xs text-zinc-600 not-italic">✎</span>
+                        </button>
+                      ) : (
+                        <span className={m.surnomRP?.trim() ? 'text-zinc-100' : 'text-zinc-500 italic'}>
+                          {surnomAffiche(m)}
+                        </span>
+                      )}
                     </td>
                     <td className="py-2.5 pr-4 text-zinc-300">{m.telephoneRP || '—'}</td>
                     <td className="py-2.5 pr-4">

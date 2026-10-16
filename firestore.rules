@@ -303,10 +303,12 @@ service cloud.firestore {
           signedIn()
           && request.auth.uid == uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-               ['nomRP', 'telephoneRP', 'anniversaireRP', 'compteBancaire', 'present', 'presenceAt',
+               ['nomRP', 'surnomRP', 'telephoneRP', 'anniversaireRP', 'compteBancaire', 'present', 'presenceAt',
                 'email', 'displayName', 'photoURL'])
           && !request.resource.data.keys().hasAny(['email', 'displayName', 'photoURL'])
           && shortString(request.resource.data.nomRP, 60)
+          // Surnom RP : facultatif, absent des fiches créées avant
+          && (!('surnomRP' in request.resource.data) || shortString(request.resource.data.surnomRP, 30))
           && shortString(request.resource.data.telephoneRP, 20)
           && anniversaireValide(request.resource.data)
           && soldeValide(request.resource.data)
@@ -340,6 +342,13 @@ service cloud.firestore {
           )
           && request.resource.data.validatedBy == request.auth.uid
           && request.resource.data.validatedAt == request.time
+        )
+        // Admin : correction du surnom d'un autre membre, et de rien d'autre
+        || (
+          isAdmin()
+          && request.auth.uid != uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['surnomRP'])
+          && shortString(request.resource.data.surnomRP, 30)
         )
         // Grade supérieur : correction du solde d'un joueur de rang strictement inférieur (admin : tous)
         || (

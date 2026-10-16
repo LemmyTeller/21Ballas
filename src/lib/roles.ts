@@ -57,6 +57,11 @@ export function rolesAttribuables(acteur: Sujet): Role[] {
   return aLeDroitAdmin(acteur) ? ROLES_VALIDES : ROLES_VALIDES.filter((r) => RANGS[r] < RANGS[acteur.role])
 }
 
+// Surnom du personnage, ou à défaut son prénom (le premier mot du nom RP)
+export function surnomAffiche(membre: Pick<Membre, 'nomRP' | 'surnomRP'>): string {
+  return membre.surnomRP?.trim() || membre.nomRP.trim().split(/\s+/)[0] || 'Sans nom RP'
+}
+
 export function nomAffiche(membre: Pick<Membre, 'nomRP'> | undefined): string {
   return membre?.nomRP.trim() || 'Sans nom RP'
 }

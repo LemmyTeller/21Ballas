@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setMembre({
             uid: snap.id,
             nomRP: data.nomRP ?? '',
+            surnomRP: data.surnomRP ?? '',
             telephoneRP: data.telephoneRP ?? '',
             anniversaireRP: data.anniversaireRP,
             compteBancaire: data.compteBancaire,

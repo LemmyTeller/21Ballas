@@ -121,13 +121,19 @@ export async function supprimerJoueur(acteur: Membre, cible: Membre, raison: Rai
 
 export async function majProfil(
   uid: string,
-  profil: { nomRP: string; telephoneRP: string; anniversaireRP: string },
+  profil: { nomRP: string; surnomRP: string; telephoneRP: string; anniversaireRP: string },
 ): Promise<void> {
   await updateDoc(doc(db, 'users', uid), {
     nomRP: profil.nomRP.trim(),
+    surnomRP: profil.surnomRP.trim(),
     telephoneRP: profil.telephoneRP.trim(),
     anniversaireRP: profil.anniversaireRP.trim(),
   })
+}
+
+// Un admin corrige le surnom d'un autre membre ; vide : le prénom RP reprend sa place
+export async function modifierSurnom(uid: string, surnomRP: string): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), { surnomRP: surnomRP.trim().slice(0, 30) })
 }
 
 export async function basculerPresence(uid: string, present: boolean): Promise<void> {
