@@ -22,7 +22,7 @@ import { useTarifs } from '../features/tarifs/useTarifs'
 import { useLieux } from '../features/gestion/useLieux'
 import { quantiteDans, useArticles } from '../features/stock/useArticles'
 import { formatNombre, formatPrix } from '../lib/format'
-import { aAuMoins } from '../lib/roles'
+import { peutGererLeGroupe } from '../lib/roles'
 import { useReferences } from '../lib/useCatalogue'
 import type { Partenaire, Reference, SensTarif, Tarif, TypePartenaire } from '../types'
 
@@ -77,7 +77,7 @@ export function Tarifs() {
   const contactsDe = (partenaire: Partenaire) =>
     contacts.data.filter((c) => c.partenaireId === partenaire.id).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
 
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
   const chargement = partenaires.loading || tarifs.loading || articles.loading || lieux.loading || !catalogue.items
 
   // Seuls le Cartel et les groupes ont leur propre grille ; les petites mains partagent la grille commune
@@ -204,7 +204,11 @@ export function Tarifs() {
               {pmOuvert && (
                 <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
                   <li>
-                    <button type="button" className={classeEntree(grillePM)} onClick={() => setSelectionId(ID_GRILLE_PM)}>
+                    <button
+                      type="button"
+                      className={classeEntree(grillePM)}
+                      onClick={() => setSelectionId(ID_GRILLE_PM)}
+                    >
                       Tarif commun
                     </button>
                   </li>
@@ -322,7 +326,10 @@ export function Tarifs() {
                                         {formatNombre(stock(tarif))}
                                       </td>
                                       <td className="py-2 pl-3 text-right">
-                                        <Valeurs propre={valeur(tarif, tarif.prixPropre)} sale={valeur(tarif, tarif.prixSale)} />
+                                        <Valeurs
+                                          propre={valeur(tarif, tarif.prixPropre)}
+                                          sale={valeur(tarif, tarif.prixSale)}
+                                        />
                                       </td>
                                     </>
                                   )}
@@ -335,7 +342,11 @@ export function Tarifs() {
                                       className="flex size-7 items-center justify-center rounded-md text-lg leading-none text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
                                       onClick={(e) => {
                                         const cadre = e.currentTarget.getBoundingClientRect()
-                                        setMenu({ tarif, droite: window.innerWidth - cadre.right, haut: cadre.bottom + 4 })
+                                        setMenu({
+                                          tarif,
+                                          droite: window.innerWidth - cadre.right,
+                                          haut: cadre.bottom + 4,
+                                        })
                                       }}
                                     >
                                       ⋯
@@ -418,8 +429,7 @@ export function Tarifs() {
         <Modal title={`Contacts — ${selection.nom}`} onClose={() => setFenetre(null)}>
           {selection.telephone && (
             <p className="text-sm text-zinc-300">
-              Téléphone :{' '}
-              <span className="font-semibold text-zinc-50 tabular-nums">{selection.telephone}</span>
+              Téléphone : <span className="font-semibold text-zinc-50 tabular-nums">{selection.telephone}</span>
             </p>
           )}
           {contactsDe(selection).length === 0 ? (
@@ -436,9 +446,13 @@ export function Tarifs() {
                       <span className="font-medium text-zinc-100">{c.nom}</span>
                       {c.role && <span className="text-zinc-500"> · {c.role}</span>}
                     </p>
-                    <span className="font-semibold whitespace-nowrap text-zinc-50 tabular-nums">{c.telephone || '—'}</span>
+                    <span className="font-semibold whitespace-nowrap text-zinc-50 tabular-nums">
+                      {c.telephone || '—'}
+                    </span>
                   </div>
-                  {c.informations && <p className="mt-0.5 text-xs whitespace-pre-wrap text-zinc-400">{c.informations}</p>}
+                  {c.informations && (
+                    <p className="mt-0.5 text-xs whitespace-pre-wrap text-zinc-400">{c.informations}</p>
+                  )}
                 </li>
               ))}
             </ul>

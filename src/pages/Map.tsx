@@ -16,7 +16,7 @@ import { usePartenaires } from '../features/tarifs/usePartenaires'
 import { COULEURS_PLAN, ETAPE_LABELS, TYPES_POINT, etatPlan, typePoint } from '../lib/carte'
 import { formatNombre, formatRestant } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
-import { aAuMoins, nomAffiche } from '../lib/roles'
+import { nomAffiche, peutGererLeGroupe } from '../lib/roles'
 import type { PointCarte, TypePoint } from '../types'
 
 // Ce que fera le prochain clic sur la carte
@@ -41,7 +41,7 @@ export function MapPage() {
   // Point dont la fiche est ouverte
   const [ficheId, setFicheId] = useState<string | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
 
   const organisations = useMemo(
     () => partenaires.data.filter((p) => p.type !== 'pm').sort(comparerPartenaires),
@@ -178,7 +178,9 @@ export function MapPage() {
                     style={{ backgroundColor: t.couleur }}
                   />
                   {t.pluriel}
-                  <span className="text-zinc-500 tabular-nums">{points.data.filter((p) => p.type === t.id).length}</span>
+                  <span className="text-zinc-500 tabular-nums">
+                    {points.data.filter((p) => p.type === t.id).length}
+                  </span>
                 </button>
               )
             })}
@@ -226,7 +228,10 @@ export function MapPage() {
                             {point.etape && ETAPE_LABELS[point.etape]} · {formatNombre(point.quantite ?? 0)} plants
                           </span>
                         </span>
-                        <span className="font-semibold whitespace-nowrap tabular-nums" style={{ color: COULEURS_PLAN[etat] }}>
+                        <span
+                          className="font-semibold whitespace-nowrap tabular-nums"
+                          style={{ color: COULEURS_PLAN[etat] }}
+                        >
                           {etat === 'pret' ? 'Prêt' : etat === 'arroser' ? 'À arroser' : formatRestant(restant)}
                         </span>
                       </button>

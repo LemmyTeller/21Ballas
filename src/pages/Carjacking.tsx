@@ -14,7 +14,7 @@ import { useArticles } from '../features/stock/useArticles'
 import { TuileCouleur } from '../features/tarifs/TuileCouleur'
 import { usePartenaires } from '../features/tarifs/usePartenaires'
 import { formatPrix } from '../lib/format'
-import { aAuMoins, formatDate, nomAffiche } from '../lib/roles'
+import { formatDate, nomAffiche, peutGererLeGroupe } from '../lib/roles'
 import { useModelesVehicules } from '../lib/useCatalogue'
 import type { Carjacking as Fiche } from '../types'
 
@@ -39,7 +39,7 @@ export function Carjacking() {
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
   const chargement = fiches.loading || membres.loading || !catalogue.items
   const nomMembre = (uid: string | undefined) => nomAffiche(membres.data.find((m) => m.uid === uid))
   const modele = (fiche: Fiche) => trouverModele(fiche, catalogue.items ?? [])

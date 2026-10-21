@@ -8,7 +8,7 @@ import { PartenaireModal } from '../features/tarifs/PartenaireModal'
 import { TuileCouleur } from '../features/tarifs/TuileCouleur'
 import { usePartenaires } from '../features/tarifs/usePartenaires'
 import { useTarifs } from '../features/tarifs/useTarifs'
-import { aAuMoins } from '../lib/roles'
+import { peutGererLeGroupe } from '../lib/roles'
 import type { Contact, Partenaire, TypePartenaire } from '../types'
 
 // `tous`, un type d'organisation, ou `aucun` pour les contacts sans rattachement
@@ -32,7 +32,7 @@ export function Annuaire() {
   const [filtre, setFiltre] = useState<Filtre>('tous')
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
 
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
   // Un contact dont le partenaire a disparu compte comme sans rattachement
   const organisation = (contact: Contact) => partenaires.data.find((p) => p.id === contact.partenaireId)
 

@@ -71,6 +71,14 @@ service cloud.firestore {
       return hasProfile() && myRank() >= 3;
     }
 
+    // Qui gère les données du groupe (stock, tarifs, transactions, blanchiment, carjacking, annuaire, tâches,
+    // contrats, annonces, amendes, carte, bizness). TEMPORAIRE : tout membre validé, Masques compris, en attendant
+    // la répartition des droits par grade. La gestion des membres (grades, retraits, journal) reste à isGrade().
+    // Doit rester aligné sur peutGererLeGroupe dans src/lib/roles.ts.
+    function gereLeGroupe() {
+      return isValide();
+    }
+
     function shortString(value, max) {
       return value is string && value.size() <= max;
     }
@@ -444,24 +452,24 @@ service cloud.firestore {
     // La capacité est contrôlée par l'appli : les règles ne savent pas compter les véhicules d'un lieu
     match /lieux/{id} {
       allow read: if isValide();
-      allow create: if isGrade() && lieuValide(request.resource.data) && request.resource.data.createdAt == request.time;
-      allow update: if isGrade()
+      allow create: if gereLeGroupe() && lieuValide(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if gereLeGroupe()
         && lieuValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // ---- Stock : catégories, articles (quantités par lieu) et prix ----
 
     match /categoriesStock/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && categorieValide(request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isGrade()
+      allow update: if gereLeGroupe()
         && categorieValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // Identifiant = id de l'item du catalogue : un seul article par item
@@ -472,12 +480,12 @@ service cloud.firestore {
       allow create: if isValide()
         && articleValide(request.resource.data)
         && request.resource.data.createdAt == request.time
-        && (isGrade() || request.resource.data.categorieId == '');
+        && (gereLeGroupe() || request.resource.data.categorieId == '');
       allow update: if isValide()
         && articleValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt
-        && (isGrade() || request.resource.data.categorieId == resource.data.categorieId);
-      allow delete: if isGrade();
+        && (gereLeGroupe() || request.resource.data.categorieId == resource.data.categorieId);
+      allow delete: if gereLeGroupe();
     }
 
     // ---- Saisie journalière : butin entré dans la journée, un document par jour (AAAA-MM-JJ) ----
@@ -498,20 +506,20 @@ service cloud.firestore {
 
     match /commerces/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && commerceValide(request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isGrade()
+      allow update: if gereLeGroupe()
         && commerceValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // Un de nos commerces blanchit en continu. Son compte garde l'état au dernier relevé (sale en attente, propre
     // disponible, heure) ; l'appli en déduit où il en est. L'id du compte est celui du commerce.
     match /comptesBlanchiment/{id} {
       allow read: if isValide();
-      allow create, update: if isGrade()
+      allow create, update: if gereLeGroupe()
         && request.resource.data.keys().hasOnly(['sale', 'propre', 'releveAt'])
         && request.resource.data.keys().hasAll(['sale', 'propre', 'releveAt'])
         && request.resource.data.sale is number
@@ -521,13 +529,13 @@ service cloud.firestore {
         && request.resource.data.propre >= 0
         && request.resource.data.propre <= 1000000000000
         && request.resource.data.releveAt == request.time;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // Journal des ajouts de sale, retraits de propre et relevés : en ajout seul
     match /operationsBlanchiment/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && request.resource.data.keys().hasOnly(
              ['type', 'commerceId', 'commerceNom', 'montant', 'sale', 'propre', 'lieuId', 'parUid', 'createdAt'])
         && request.resource.data.keys().hasAll(
@@ -555,7 +563,7 @@ service cloud.firestore {
       allow read: if isValide();
       allow create: if false;
 
-      allow update: if isGrade()
+      allow update: if gereLeGroupe()
         && resource.data.statut == 'en_cours'
         && request.resource.data.statut == 'recupere'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
@@ -565,7 +573,7 @@ service cloud.firestore {
         && request.resource.data.recupereParUid == request.auth.uid
         && request.resource.data.recupereAt == request.time;
 
-      allow delete: if isGrade() && resource.data.statut == 'en_cours';
+      allow delete: if gereLeGroupe() && resource.data.statut == 'en_cours';
     }
 
     // ---- Carjacking : voitures à aller voler ----
@@ -575,7 +583,7 @@ service cloud.firestore {
     match /carjackings/{id} {
       allow read: if isValide();
 
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && request.resource.data.keys().hasOnly(
              ['spawn', 'modele', 'note', 'partenaireId', 'statut', 'creeParUid', 'createdAt'])
         && request.resource.data.keys().hasAll(['spawn', 'modele', 'note', 'statut', 'creeParUid', 'createdAt'])
@@ -612,7 +620,7 @@ service cloud.firestore {
         )
         // Rachat renseigné, par un gradé : la fiche est close
         || (
-          isGrade()
+          gereLeGroupe()
           && resource.data.statut == 'depose'
           && request.resource.data.statut == 'clos'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
@@ -625,7 +633,7 @@ service cloud.firestore {
         )
         // Retour à l'étape précédente, par un gradé, pour corriger une erreur
         || (
-          isGrade()
+          gereLeGroupe()
           && (
             (
               resource.data.statut == 'vole'
@@ -640,7 +648,7 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if isGrade() && resource.data.statut != 'clos';
+      allow delete: if gereLeGroupe() && resource.data.statut != 'clos';
     }
 
     // ---- Contrats : sommes que le groupe doit payer, avec une échéance ----
@@ -665,7 +673,7 @@ service cloud.firestore {
         && (
           // Informations et position : l'auteur ou un gradé
           (
-            (isGrade() || resource.data.creeParUid == request.auth.uid)
+            (gereLeGroupe() || resource.data.creeParUid == request.auth.uid)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                  ['x', 'y', 'nom', 'commentaire', 'proprietaireId', 'commerceId', 'quantite', 'updatedAt'])
           )
@@ -685,7 +693,7 @@ service cloud.firestore {
 
       // Récolter un plan le fait disparaître : tout membre validé
       allow delete: if isValide()
-        && (isGrade() || resource.data.creeParUid == request.auth.uid || resource.data.type == 'plan');
+        && (gereLeGroupe() || resource.data.creeParUid == request.auth.uid || resource.data.type == 'plan');
     }
 
     // ---- Bizne$$ : caisses de graines, lots à l'établi, journal des récoltes ----
@@ -724,7 +732,7 @@ service cloud.firestore {
 
       // Commande passée par erreur : tant qu'elle est en attente
       allow delete: if resource.data.statut == 'commandee'
-        && (isGrade() || (isValide() && resource.data.creeParUid == request.auth.uid));
+        && (gereLeGroupe() || (isValide() && resource.data.creeParUid == request.auth.uid));
     }
 
     match /transformations/{id} {
@@ -761,7 +769,7 @@ service cloud.firestore {
 
       // Annulation d'un lot en cours
       allow delete: if resource.data.statut == 'en_cours'
-        && (isGrade() || (isValide() && resource.data.lanceParUid == request.auth.uid));
+        && (gereLeGroupe() || (isValide() && resource.data.lanceParUid == request.auth.uid));
     }
 
     // Écrit à la récolte d'un plan (onglet Map), puis figé : c'est la mémoire du bilan
@@ -792,69 +800,69 @@ service cloud.firestore {
 
       // Correction de la note, ou suppression : l'auteur de la saisie, le joueur concerné, un gradé
       allow update: if isValide()
-        && (isGrade() || resource.data.creeParUid == request.auth.uid || resource.data.membreUid == request.auth.uid)
+        && (gereLeGroupe() || resource.data.creeParUid == request.auth.uid || resource.data.membreUid == request.auth.uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note'])
         && amendeValide(request.resource.data);
 
       allow delete: if isValide()
-        && (isGrade() || resource.data.creeParUid == request.auth.uid || resource.data.membreUid == request.auth.uid);
+        && (gereLeGroupe() || resource.data.creeParUid == request.auth.uid || resource.data.membreUid == request.auth.uid);
     }
 
     match /contrats/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && contratValide(request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isGrade()
+      allow update: if gereLeGroupe()
         && contratValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // Anciens prix du Stock, remplacés par les tarifs : plus aucune écriture, seulement le nettoyage par les gradés
     match /prixArticles/{id} {
-      allow read, delete: if isGrade();
+      allow read, delete: if gereLeGroupe();
     }
 
     // ---- Tarifs : partenaires (groupes, petites mains) et leurs grilles d'achat / de vente ----
 
     match /partenaires/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && partenaireValide(request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isGrade()
+      allow update: if gereLeGroupe()
         && partenaireValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // ---- Annuaire : contacts RP, rattachés ou non à un partenaire ----
 
     match /contacts/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && contactValide(request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isGrade()
+      allow update: if gereLeGroupe()
         && contactValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // Une ligne par partenaire, sens et item : ces trois champs ne changent plus après la création
     match /tarifs/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && tarifValide(request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isGrade()
+      allow update: if gereLeGroupe()
         && tarifValide(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.partenaireId == resource.data.partenaireId
         && request.resource.data.reference == resource.data.reference
         && request.resource.data.sens == resource.data.sens;
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // ---- Commerce : commandes avec un partenaire, pouvant mêler ventes et achats ----
@@ -887,7 +895,7 @@ service cloud.firestore {
             && lignesValides(request.resource.data.lignes)
           )
           || (
-            isGrade()
+            gereLeGroupe()
             && request.resource.data.statut in ['validee', 'annulee']
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                  ['statut', 'recuPropre', 'recuSale', 'recuItems', 'payePropre', 'payeSale', 'payeItems',
@@ -912,13 +920,13 @@ service cloud.firestore {
 
     match /taches/{id} {
       allow read: if isValide();
-      allow create: if isGrade()
+      allow create: if gereLeGroupe()
         && tacheValide(request.resource.data)
         && request.resource.data.auteurUid == request.auth.uid
         && request.resource.data.createdAt == request.time;
       allow update: if
         (
-          isGrade()
+          gereLeGroupe()
           && tacheValide(request.resource.data)
           && request.resource.data.auteurUid == resource.data.auteurUid
           && request.resource.data.createdAt == resource.data.createdAt
@@ -929,7 +937,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fait'])
           && request.resource.data.fait is bool
         );
-      allow delete: if isGrade();
+      allow delete: if gereLeGroupe();
     }
 
     // ---- Annonces ----
@@ -937,7 +945,7 @@ service cloud.firestore {
     match /annonces/{id} {
       allow read: if isValide();
 
-      allow create: if isOfficier()
+      allow create: if gereLeGroupe()
         && request.resource.data.keys().hasOnly(['titre', 'contenu', 'auteurUid', 'auteurNom', 'createdAt'])
         && request.resource.data.keys().hasAll(['titre', 'contenu', 'auteurUid', 'auteurNom', 'createdAt'])
         && request.resource.data.auteurUid == request.auth.uid
@@ -948,14 +956,14 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
 
       // Correction du titre et du message, par ceux qui peuvent supprimer l'annonce
-      allow update: if (isGrade() || (isOfficier() && resource.data.auteurUid == request.auth.uid))
+      allow update: if (gereLeGroupe() || (gereLeGroupe() && resource.data.auteurUid == request.auth.uid))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titre', 'contenu'])
         && shortString(request.resource.data.titre, 120)
         && request.resource.data.titre.size() > 0
         && shortString(request.resource.data.contenu, 4000);
 
-      allow delete: if isGrade()
-        || (isOfficier() && resource.data.auteurUid == request.auth.uid);
+      allow delete: if gereLeGroupe()
+        || (gereLeGroupe() && resource.data.auteurUid == request.auth.uid);
     }
 
     // ---- Journal d'audit : ajout seul ----

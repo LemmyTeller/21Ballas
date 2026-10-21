@@ -10,7 +10,7 @@ import { CategorieModal } from '../features/stock/CategorieModal'
 import { quantiteDans, useArticles } from '../features/stock/useArticles'
 import { useCategories } from '../features/stock/useCategories'
 import { ESPACE_INSECABLE, formatNombre, formatPoids } from '../lib/format'
-import { aAuMoins } from '../lib/roles'
+import { peutGererLeGroupe } from '../lib/roles'
 import { useReferences } from '../lib/useCatalogue'
 import type { Article, CategorieStock, Reference } from '../types'
 
@@ -52,7 +52,7 @@ export function Stock() {
   const [erreurAction, setErreurAction] = useState<string | null>(null)
   const nbColonnes = useNombreColonnes()
 
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
   // Un lieu supprimé pendant qu'on le consulte ramène sur Global
   const lieu = lieux.data.find((l) => l.id === onglet)
   const chargement = lieux.loading || categories.loading || articles.loading || !catalogue.items
@@ -124,7 +124,9 @@ export function Stock() {
         ))}
       </nav>
 
-      <ErrorMessage>{lieux.error ?? categories.error ?? articles.error ?? catalogue.erreur ?? erreurAction}</ErrorMessage>
+      <ErrorMessage>
+        {lieux.error ?? categories.error ?? articles.error ?? catalogue.erreur ?? erreurAction}
+      </ErrorMessage>
 
       {chargement ? (
         !catalogue.erreur && <Chargement />
@@ -132,7 +134,8 @@ export function Stock() {
         <>
           {lieu ? (
             <p className="text-sm text-zinc-400">
-              Poids stocké dans {lieu.nom} : <span className="font-semibold text-zinc-100">{formatPoids(poidsTotal)}</span>
+              Poids stocké dans {lieu.nom} :{' '}
+              <span className="font-semibold text-zinc-100">{formatPoids(poidsTotal)}</span>
             </p>
           ) : (
             <JaugePoids poids={poidsTotal} />
@@ -151,76 +154,79 @@ export function Stock() {
             {colonnes.map((colonne, c) => (
               <div key={c} className="flex min-w-0 flex-1 flex-col gap-4">
                 {colonne.map(({ categorie, articles: lignes }) => (
-              <Card
-                key={categorie?.id ?? 'sans'}
-                title={categorie?.nom ?? 'Sans catégorie'}
-                action={
-                  estGrade &&
-                  categorie && (
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        className="text-xs text-zinc-500 hover:text-purple-300"
-                        onClick={() => setFenetre({ type: 'categorie', categorie })}
-                      >
-                        Modifier
-                      </button>
-                      {lieu && <Button onClick={() => setFenetre({ type: 'ajout', categorie })}>+ Item</Button>}
-                    </div>
-                  )
-                }
-              >
-                {lignes.length === 0 ? (
-                  <p className="text-sm text-zinc-600">
-                    {lieu ? `Rien dans ${lieu.nom}.` : 'Aucun item dans cette catégorie.'}
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-zinc-800">
-                    {lignes.map((article) => {
-                      const quantite = quantiteAffichee(article)
-                      const repartition = lieux.data
-                        .filter((l) => quantiteDans(article, l.id) > 0)
-                        .map((l) => `${l.nom} ${nombre.format(quantiteDans(article, l.id))}`)
-                        .join(' · ')
-                      return (
-                        <li key={article.id} className={`flex items-center gap-3 py-2 ${quantite === 0 ? 'opacity-50' : ''}`}>
-                          <ImageItem item={item(article)} dossier={item(article)?.dossier} />
-                          <div className="min-w-0 flex-1">
-                            {estGrade ? (
-                              <button
-                                type="button"
-                                className="text-left text-sm leading-tight font-medium text-zinc-100 hover:underline"
-                                onClick={() => setFenetre({ type: 'article', article })}
-                              >
-                                {nom(article)}
-                              </button>
-                            ) : (
-                              <p className="text-sm leading-tight font-medium text-zinc-100">{nom(article)}</p>
-                            )}
-                            <p className="text-xs text-zinc-500">
-                              <span className="text-zinc-300">{formatPoids(poids(article))}</span>
-                              {!lieu && ` · ${repartition || 'Rupture de stock'}`}
-                            </p>
-                          </div>
-                          {lieu && estGrade ? (
-                            <QuantiteEditeur
-                              // Remonté quand la quantité change côté serveur, pour repartir de la valeur à jour
-                              key={quantite}
-                              quantite={quantite}
-                              onAjuster={(delta) => agir(ajusterQuantite(article.id, lieu.id, delta))}
-                              onDefinir={(valeur) => agir(definirQuantite(article.id, lieu.id, valeur))}
-                            />
-                          ) : (
-                            <span className="text-base font-semibold text-zinc-100 tabular-nums">
-                              {nombre.format(quantite)}
-                            </span>
-                          )}
-                        </li>
+                  <Card
+                    key={categorie?.id ?? 'sans'}
+                    title={categorie?.nom ?? 'Sans catégorie'}
+                    action={
+                      estGrade &&
+                      categorie && (
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            className="text-xs text-zinc-500 hover:text-purple-300"
+                            onClick={() => setFenetre({ type: 'categorie', categorie })}
+                          >
+                            Modifier
+                          </button>
+                          {lieu && <Button onClick={() => setFenetre({ type: 'ajout', categorie })}>+ Item</Button>}
+                        </div>
                       )
-                    })}
-                  </ul>
-                )}
-              </Card>
+                    }
+                  >
+                    {lignes.length === 0 ? (
+                      <p className="text-sm text-zinc-600">
+                        {lieu ? `Rien dans ${lieu.nom}.` : 'Aucun item dans cette catégorie.'}
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-zinc-800">
+                        {lignes.map((article) => {
+                          const quantite = quantiteAffichee(article)
+                          const repartition = lieux.data
+                            .filter((l) => quantiteDans(article, l.id) > 0)
+                            .map((l) => `${l.nom} ${nombre.format(quantiteDans(article, l.id))}`)
+                            .join(' · ')
+                          return (
+                            <li
+                              key={article.id}
+                              className={`flex items-center gap-3 py-2 ${quantite === 0 ? 'opacity-50' : ''}`}
+                            >
+                              <ImageItem item={item(article)} dossier={item(article)?.dossier} />
+                              <div className="min-w-0 flex-1">
+                                {estGrade ? (
+                                  <button
+                                    type="button"
+                                    className="text-left text-sm leading-tight font-medium text-zinc-100 hover:underline"
+                                    onClick={() => setFenetre({ type: 'article', article })}
+                                  >
+                                    {nom(article)}
+                                  </button>
+                                ) : (
+                                  <p className="text-sm leading-tight font-medium text-zinc-100">{nom(article)}</p>
+                                )}
+                                <p className="text-xs text-zinc-500">
+                                  <span className="text-zinc-300">{formatPoids(poids(article))}</span>
+                                  {!lieu && ` · ${repartition || 'Rupture de stock'}`}
+                                </p>
+                              </div>
+                              {lieu && estGrade ? (
+                                <QuantiteEditeur
+                                  // Remonté quand la quantité change côté serveur, pour repartir de la valeur à jour
+                                  key={quantite}
+                                  quantite={quantite}
+                                  onAjuster={(delta) => agir(ajusterQuantite(article.id, lieu.id, delta))}
+                                  onDefinir={(valeur) => agir(definirQuantite(article.id, lieu.id, valeur))}
+                                />
+                              ) : (
+                                <span className="text-base font-semibold text-zinc-100 tabular-nums">
+                                  {nombre.format(quantite)}
+                                </span>
+                              )}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </Card>
                 ))}
               </div>
             ))}
@@ -269,7 +275,8 @@ function JaugePoids({ poids }: { poids: number }) {
         <h2 className="text-sm font-medium text-zinc-400">Poids total stocké</h2>
         <p className="text-sm text-zinc-400">
           <span className="text-xl font-bold text-zinc-50 tabular-nums">{formatPoids(poids)}</span> /{' '}
-          {formatPoids(POIDS_MAX_KG)} · {nombre.format(taux * 100)}{ESPACE_INSECABLE}%
+          {formatPoids(POIDS_MAX_KG)} · {nombre.format(taux * 100)}
+          {ESPACE_INSECABLE}%
         </p>
       </div>
       <div
@@ -306,11 +313,18 @@ function QuantiteEditeur({
     else if (Number(saisie) !== quantite) onDefinir(Number(saisie))
   }
 
-  const bouton = 'size-8 rounded-md border border-zinc-700 text-lg leading-none text-zinc-200 hover:bg-zinc-800 disabled:opacity-40'
+  const bouton =
+    'size-8 rounded-md border border-zinc-700 text-lg leading-none text-zinc-200 hover:bg-zinc-800 disabled:opacity-40'
 
   return (
     <div className="flex items-center gap-1">
-      <button type="button" className={bouton} aria-label="Retirer 1" disabled={quantite <= 0} onClick={() => onAjuster(-1)}>
+      <button
+        type="button"
+        className={bouton}
+        aria-label="Retirer 1"
+        disabled={quantite <= 0}
+        onClick={() => onAjuster(-1)}
+      >
         −
       </button>
       <input
@@ -319,7 +333,14 @@ function QuantiteEditeur({
         aria-label="Quantité"
         className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-center text-base font-semibold text-zinc-50 tabular-nums focus:border-purple-500 focus:outline-none"
         value={saisie.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-        onChange={(e) => setSaisie(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 12))}
+        onChange={(e) =>
+          setSaisie(
+            e.target.value
+              .replace(/\D/g, '')
+              .replace(/^0+(?=\d)/, '')
+              .slice(0, 12),
+          )
+        }
         onFocus={(e) => e.currentTarget.select()}
         onBlur={valider}
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}

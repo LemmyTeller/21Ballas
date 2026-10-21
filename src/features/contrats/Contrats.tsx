@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Card, Chargement, ErrorMessage } from '../../components/ui'
 import { formatPrix } from '../../lib/format'
 import { useMaintenant } from '../../lib/presence'
-import { aAuMoins } from '../../lib/roles'
+import { peutGererLeGroupe } from '../../lib/roles'
 import type { Contrat, Membre } from '../../types'
 import { echeanceCourante, etatContrat, marquerPaye, type EtatContrat } from './api'
 import { ContratModal } from './ContratModal'
@@ -32,7 +32,7 @@ export function Contrats({ membre }: { membre: Membre }) {
   // `null` : fenêtre fermée ; `{}` : ajout ; `{ contrat }` : modification
   const [fenetre, setFenetre] = useState<{ contrat?: Contrat } | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
-  const estGrade = aAuMoins(membre, 'n2')
+  const estGrade = peutGererLeGroupe(membre)
 
   // Les contrats à payer d'abord, du plus urgent au plus lointain, puis ceux déjà payés
   const tries = contrats.data

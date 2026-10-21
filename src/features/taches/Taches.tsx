@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Modal } from '../../components/Modal'
 import { Button, Card, Chargement, ErrorMessage, inputClass } from '../../components/ui'
-import { aAuMoins } from '../../lib/roles'
+import { peutGererLeGroupe } from '../../lib/roles'
 import type { Membre, Tache } from '../../types'
 import { useCarjackings } from '../carjacking/useCarjackings'
 import { cocherTache, creerTache, echangerTaches, supprimerTache } from './api'
@@ -19,7 +19,7 @@ export function Taches({ membre }: { membre: Membre }) {
   const aVoler = voitures.length
   const [saisie, setSaisie] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const estGrade = aAuMoins(membre, 'n2')
+  const estGrade = peutGererLeGroupe(membre)
 
   // Les tâches réalisées descendent en bas de liste, sans perdre leur ordre entre elles
   const aFaire = taches.data.filter((t) => !t.fait)
@@ -35,7 +35,9 @@ export function Taches({ membre }: { membre: Membre }) {
     return (
       <li key={tache.id} className="flex items-start gap-3 py-2">
         <Coche fait={tache.fait} titre={tache.titre} onClick={() => agir(cocherTache(tache.id, !tache.fait))} />
-        <p className={`min-w-0 flex-1 pt-0.5 text-sm break-words ${tache.fait ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}>
+        <p
+          className={`min-w-0 flex-1 pt-0.5 text-sm break-words ${tache.fait ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}
+        >
           {tache.titre}
         </p>
         {estGrade && (
@@ -59,7 +61,9 @@ export function Taches({ membre }: { membre: Membre }) {
               aria-label={`Supprimer la tâche ${tache.titre}`}
               title="Supprimer"
               className="flex size-7 items-center justify-center rounded-md text-zinc-500 hover:bg-red-950 hover:text-red-300"
-              onClick={() => window.confirm(`Supprimer la tâche « ${tache.titre} » ?`) && agir(supprimerTache(tache.id))}
+              onClick={() =>
+                window.confirm(`Supprimer la tâche « ${tache.titre} » ?`) && agir(supprimerTache(tache.id))
+              }
             >
               ✕
             </button>
@@ -133,7 +137,14 @@ function Coche({ fait, titre, onClick }: { fait: boolean; titre: string; onClick
       }`}
       onClick={onClick}
     >
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="3.5" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.5"
+        aria-hidden="true"
+      >
         <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
@@ -150,7 +161,14 @@ function Fleche({ sens, disabled, onClick }: { sens: 'haut' | 'bas'; disabled: b
       className="flex size-7 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-25 disabled:hover:bg-transparent"
       onClick={onClick}
     >
-      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        className="size-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        aria-hidden="true"
+      >
         <path d={sens === 'haut' ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>

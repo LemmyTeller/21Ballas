@@ -10,7 +10,7 @@ import { useLieux } from '../features/gestion/useLieux'
 import { useMembres } from '../features/members/useMembres'
 import { useArticles } from '../features/stock/useArticles'
 import { formatNombre, formatPoids, formatPrix } from '../lib/format'
-import { aAuMoins, formatDate, nomAffiche } from '../lib/roles'
+import { formatDate, nomAffiche, peutGererLeGroupe } from '../lib/roles'
 import { useReferences } from '../lib/useCatalogue'
 import type { Commande, Echange, LigneCommande, StatutCommande } from '../types'
 
@@ -70,9 +70,8 @@ export function Commerce() {
   const [aValider, setAValider] = useState<Commande | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
-  const estGrade = aAuMoins(moi, 'n2')
-  const chargement =
-    commandes.loading || membres.loading || lieux.loading || articles.loading || !catalogue.items
+  const estGrade = peutGererLeGroupe(moi)
+  const chargement = commandes.loading || membres.loading || lieux.loading || articles.loading || !catalogue.items
 
   const enCours = commandes.data
     .filter((c) => c.statut === 'en_attente')
@@ -102,7 +101,12 @@ export function Commerce() {
 
   function retirerLigne(commande: Commande, ligne: LigneCommande) {
     if (window.confirm(`Retirer ${nomItem(ligne.reference)} de la commande ?`)) {
-      agir(majLignes(commande.id, commande.lignes.filter((l) => l !== ligne)))
+      agir(
+        majLignes(
+          commande.id,
+          commande.lignes.filter((l) => l !== ligne),
+        ),
+      )
     }
   }
 
@@ -146,7 +150,9 @@ export function Commerce() {
         !catalogue.erreur && <Chargement />
       ) : affichees.length === 0 ? (
         <p className="text-sm text-zinc-500">
-          {vue === 'en_cours' ? 'Aucune vente ni achat en cours.' : 'Aucune commande validée ou annulée pour le moment.'}
+          {vue === 'en_cours'
+            ? 'Aucune vente ni achat en cours.'
+            : 'Aucune commande validée ou annulée pour le moment.'}
         </p>
       ) : (
         <div className="grid items-start gap-6 xl:grid-cols-2">
@@ -173,8 +179,8 @@ export function Commerce() {
                   {!enAttente && (
                     <>
                       {' '}
-                      · {commande.statut === 'validee' ? 'validée' : 'annulée'} le {formatDate(commande.clotureAt, true)} par{' '}
-                      {nomMembre(commande.clotureParUid)}
+                      · {commande.statut === 'validee' ? 'validée' : 'annulée'} le{' '}
+                      {formatDate(commande.clotureAt, true)} par {nomMembre(commande.clotureParUid)}
                     </>
                   )}
                 </p>
@@ -198,7 +204,10 @@ export function Commerce() {
                       {[...lignesDe(commande, 'vente'), ...lignesDe(commande, 'achat')].map((ligne) => (
                         <tr key={`${ligne.sens}-${ligne.reference}`}>
                           <td className="w-12 py-2 pr-3">
-                            <ImageItem item={reference(ligne.reference)} dossier={reference(ligne.reference)?.dossier} />
+                            <ImageItem
+                              item={reference(ligne.reference)}
+                              dossier={reference(ligne.reference)?.dossier}
+                            />
                           </td>
                           <td className="py-2 pr-3">
                             <p className="font-medium text-zinc-100">{nomItem(ligne.reference)}</p>

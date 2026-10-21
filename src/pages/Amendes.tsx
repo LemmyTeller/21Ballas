@@ -15,7 +15,7 @@ import {
 } from '../lib/delits'
 import { formatRestant } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
-import { aAuMoins, estValide, nomAffiche, rang } from '../lib/roles'
+import { estValide, nomAffiche, rang, peutGererLeGroupe } from '../lib/roles'
 import type { Amende } from '../types'
 
 const SEMAINE_MS = 7 * 24 * 3_600_000
@@ -34,7 +34,7 @@ export function Amendes() {
   const maintenant = useMaintenant()
   const [saisie, setSaisie] = useState<Saisie | null>(null)
   const [limite, setLimite] = useState(PAS_HISTORIQUE)
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
 
   const valides = membres.data
     .filter((m) => estValide(m.role))

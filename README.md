@@ -24,6 +24,12 @@ Intranet du groupe RP Ballas (21 JumpClick). React + Vite + TypeScript + Tailwin
 | `n1` | N1 | idem, gère aussi les N2 |
 | `revoque` | Révoqué | aucun accès |
 
+**Provisoire (v1.15.0)** : la gestion des données du groupe (stock, tarifs, transactions, blanchiment, carjacking, annuaire,
+tâches, contrats, annonces, amendes, carte, Bizne$$) est ouverte à tout membre validé, Masques compris
+(`gereLeGroupe()` dans les règles, `peutGererLeGroupe` dans `src/lib/roles.ts`). Seule la gestion des membres (validation,
+grades, retraits, solde d'un autre, journal) reste réservée à N2, N1 et admin. Les tests des règles qui vérifiaient qu'un
+Masque est refusé sur ces données ne reflètent plus ce choix tant que la répartition par grade n'est pas définie.
+
 La sécurité est portée par [firestore.rules](firestore.rules) ; l'interface ne fait que masquer les écrans.
 N1 et N2 ne modifient qu'une fiche de rang strictement inférieur au leur et n'attribuent qu'un grade strictement inférieur.
 Personne ne modifie son propre rôle, sauf un admin (voir ci-dessous).

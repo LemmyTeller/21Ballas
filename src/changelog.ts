@@ -8,6 +8,14 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.15.0',
+    date: '2026-10-21',
+    changements: [
+      'Pour le moment, les Masques noirs et violets peuvent faire tout ce que font les N1 et N2 sur les données du groupe : stock, tarifs, transactions, blanchiment, carjacking, annuaire, tâches, contrats, annonces, amendes, carte et Bizne$$.',
+      'La gestion des membres (validation, grades, retraits, journal) reste réservée aux N1 et N2.',
+    ],
+  },
+  {
     version: '1.14.0',
     date: '2026-10-16',
     changements: [

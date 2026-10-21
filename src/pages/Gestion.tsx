@@ -12,16 +12,14 @@ import { useVehicules } from '../features/gestion/useVehicules'
 import { VehiculeModal } from '../features/gestion/VehiculeModal'
 import { useMembres } from '../features/members/useMembres'
 import { quantiteDans, useArticles } from '../features/stock/useArticles'
-import { aAuMoins, aLeDroitAdmin, estValide, nomAffiche, peutGerer, rang } from '../lib/roles'
+import { aLeDroitAdmin, estValide, nomAffiche, peutGerer, rang, peutGererLeGroupe } from '../lib/roles'
 import type { Lieu, Membre, Vehicule } from '../types'
 
 type Vue = 'membres' | 'garages'
 
 // Fenêtre ouverte : un véhicule à créer ou modifier, un lieu à créer ou modifier, un solde à corriger
 type Fenetre =
-  | { type: 'vehicule'; vehicule?: Vehicule }
-  | { type: 'lieu'; lieu?: Lieu }
-  | { type: 'solde'; membre: Membre }
+  { type: 'vehicule'; vehicule?: Vehicule } | { type: 'lieu'; lieu?: Lieu } | { type: 'solde'; membre: Membre }
 
 export function Gestion() {
   const moi = useMembre()
@@ -34,7 +32,7 @@ export function Gestion() {
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
 
   const estAdmin = aLeDroitAdmin(moi)
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
 
   const valides = membres.data
     .filter((m) => estValide(m.role))

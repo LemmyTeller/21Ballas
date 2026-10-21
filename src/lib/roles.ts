@@ -44,6 +44,14 @@ export function rang(role: Role): number {
   return RANGS[role]
 }
 
+// Gestion des données du groupe (stock, tarifs, transactions, blanchiment, carjacking, annuaire, tâches, contrats,
+// annonces, amendes, carte, bizness). TEMPORAIRE : ouverte à tout membre validé, en attendant la répartition des droits
+// par grade. La gestion des membres reste réservée à N2, N1 et admin. Doit rester aligné sur gereLeGroupe()
+// dans firestore.rules.
+export function peutGererLeGroupe(sujet: Sujet | null | undefined): boolean {
+  return aAuMoins(sujet, 'membre')
+}
+
 // L'admin gère tout le monde ; N1 et N2 uniquement les rangs strictement inférieurs au leur.
 // Personne ne gère sa propre fiche par ce biais. Doit rester aligné sur firestore.rules.
 // Une cible qui est admin sans que cela se voie sera refusée par la base à un N1 ou un N2.

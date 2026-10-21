@@ -25,7 +25,7 @@ import {
 import { REFERENCE_GRAINE, REFERENCE_TETE, TETES_PAR_PLANT, etatPlan } from '../lib/carte'
 import { formatNombre, formatPrix, formatRestant } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
-import { aAuMoins, aLeDroitAdmin, formatDate, nomAffiche } from '../lib/roles'
+import { aLeDroitAdmin, formatDate, nomAffiche, peutGererLeGroupe } from '../lib/roles'
 import type { Caisse, Transformation } from '../types'
 
 const SEMAINE_MS = 7 * 24 * 3_600_000
@@ -49,7 +49,7 @@ export function Bizness() {
   const maintenant = useMaintenant(5_000)
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
   const estAdmin = aLeDroitAdmin(moi)
   const [vue, setVue] = useState<'pilotage' | 'graph'>('pilotage')
 
@@ -87,7 +87,11 @@ export function Bizness() {
   // ---- Potentiel : ce que chaque étape peut encore donner en pochons ----
   const POCHONS_PAR_GRAINE = TETES_PAR_PLANT / TETES_PAR_POCHON
   const potentiel = [
-    { nom: 'Caisses en attente', quantite: caissesAttendues, pochons: caissesAttendues * GRAINES_PAR_CAISSE * POCHONS_PAR_GRAINE },
+    {
+      nom: 'Caisses en attente',
+      quantite: caissesAttendues,
+      pochons: caissesAttendues * GRAINES_PAR_CAISSE * POCHONS_PAR_GRAINE,
+    },
     { nom: 'Graines en stock', quantite: graines, pochons: graines * POCHONS_PAR_GRAINE },
     { nom: 'Plants en pousse', quantite: plants, pochons: plants * POCHONS_PAR_GRAINE },
     { nom: 'Têtes en stock', quantite: tetes, pochons: tetes / TETES_PAR_POCHON },
@@ -182,7 +186,11 @@ export function Bizness() {
         <>
           {/* La chaîne, étape par étape */}
           <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Etape numero={1} titre="Caisses" action={<Button onClick={() => setFenetre({ type: 'caisse' })}>Commander</Button>}>
+            <Etape
+              numero={1}
+              titre="Caisses"
+              action={<Button onClick={() => setFenetre({ type: 'caisse' })}>Commander</Button>}
+            >
               <Chiffre valeur={caissesAttendues} unite="en attente" alerte={caissesAttendues > 0} />
               {enAttente.length > 0 && (
                 <ul className="mt-3 divide-y divide-zinc-800 text-sm">
@@ -209,7 +217,11 @@ export function Bizness() {
                           ✕
                         </button>
                       )}
-                      <Button variant="ghost" className="py-1" onClick={() => setFenetre({ type: 'caisse', caisse: c })}>
+                      <Button
+                        variant="ghost"
+                        className="py-1"
+                        onClick={() => setFenetre({ type: 'caisse', caisse: c })}
+                      >
                         Clore
                       </Button>
                     </li>
@@ -353,7 +365,9 @@ export function Bizness() {
                     .
                   </>
                 ) : (
-                  <span className="text-zinc-500">Ajoute un prix de vente du pochon dans les Tarifs pour le chiffrer.</span>
+                  <span className="text-zinc-500">
+                    Ajoute un prix de vente du pochon dans les Tarifs pour le chiffrer.
+                  </span>
                 )}
               </p>
               <p className="mt-1 text-xs text-zinc-500">
@@ -473,7 +487,17 @@ function Chiffre({ valeur, unite, alerte = false }: { valeur: number; unite: str
   )
 }
 
-function LigneBilan({ titre, a, b, classe = 'text-zinc-100' }: { titre: string; a: number; b: number; classe?: string }) {
+function LigneBilan({
+  titre,
+  a,
+  b,
+  classe = 'text-zinc-100',
+}: {
+  titre: string
+  a: number
+  b: number
+  classe?: string
+}) {
   return (
     <tr>
       <td className="py-1.5 text-zinc-300">{titre}</td>

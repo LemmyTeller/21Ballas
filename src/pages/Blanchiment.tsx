@@ -26,7 +26,7 @@ import { usePartenaires } from '../features/tarifs/usePartenaires'
 import { estimerCompte } from '../lib/blanchiment'
 import { formatPrix } from '../lib/format'
 import { useMaintenant } from '../lib/presence'
-import { aAuMoins, formatDate, nomAffiche } from '../lib/roles'
+import { formatDate, nomAffiche, peutGererLeGroupe } from '../lib/roles'
 import type { Blanchiment as Depot, CommerceVille, GenreCommerce } from '../types'
 
 type Fenetre =
@@ -69,14 +69,9 @@ export function Blanchiment() {
   const [fenetre, setFenetre] = useState<Fenetre | null>(null)
   const [erreurAction, setErreurAction] = useState<string | null>(null)
 
-  const estGrade = aAuMoins(moi, 'n2')
+  const estGrade = peutGererLeGroupe(moi)
   const chargement =
-    commerces.loading ||
-    depots.loading ||
-    comptes.loading ||
-    partenaires.loading ||
-    lieux.loading ||
-    articles.loading
+    commerces.loading || depots.loading || comptes.loading || partenaires.loading || lieux.loading || articles.loading
 
   const parZip = (a: CommerceVille, b: CommerceVille) => a.zip.localeCompare(b.zip, 'fr', { numeric: true })
   const proprietaire = (commerce: CommerceVille) => partenaires.data.find((p) => p.id === commerce.proprietaireId)
@@ -118,7 +113,8 @@ export function Blanchiment() {
 
   function annuler(depot: Depot) {
     const retour = depot.lieuId ? ' Les billets retourneront dans le stock.' : ''
-    if (!window.confirm(`Annuler le blanchiment de ${formatPrix(depot.montant)} dans ${depot.commerceNom} ?${retour}`)) return
+    if (!window.confirm(`Annuler le blanchiment de ${formatPrix(depot.montant)} dans ${depot.commerceNom} ?${retour}`))
+      return
     setErreurAction(null)
     annulerBlanchiment(depot, articles.data).catch((e: Error) => setErreurAction(e.message))
   }
@@ -229,7 +225,10 @@ export function Blanchiment() {
                               aria-label={`Plafond occupé à ${Math.round((1 - etat.libre / commerce.montantMax) * 100)} %`}
                               className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-zinc-800"
                             >
-                              <div className="h-full bg-amber-500" style={{ width: `${(etat.sale / commerce.montantMax) * 100}%` }} />
+                              <div
+                                className="h-full bg-amber-500"
+                                style={{ width: `${(etat.sale / commerce.montantMax) * 100}%` }}
+                              />
                               <div
                                 className="h-full bg-emerald-500"
                                 style={{
@@ -248,7 +247,8 @@ export function Blanchiment() {
                           </>
                         ) : (
                           <p className="text-xs text-amber-300">
-                            Renseigne le taux, la durée et le plafond sur la fiche pour que l’appli estime le blanchiment.
+                            Renseigne le taux, la durée et le plafond sur la fiche pour que l’appli estime le
+                            blanchiment.
                           </p>
                         )}
                         <p className="text-xs text-zinc-500">
@@ -258,7 +258,10 @@ export function Blanchiment() {
                         </p>
                         {estGrade && (
                           <div className="flex flex-wrap justify-end gap-2 pt-1">
-                            <Button variant="ghost" onClick={() => setFenetre({ type: 'compte', commerce, action: 'releve' })}>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setFenetre({ type: 'compte', commerce, action: 'releve' })}
+                            >
                               Relevé
                             </Button>
                             <Button
@@ -304,7 +307,9 @@ export function Blanchiment() {
                               />
                             </div>
                             <p className="text-sm text-zinc-300">
-                              <span className="font-semibold text-amber-400 tabular-nums">{formatPrix(depot.montant)}</span>{' '}
+                              <span className="font-semibold text-amber-400 tabular-nums">
+                                {formatPrix(depot.montant)}
+                              </span>{' '}
                               de sale à {depot.taux} % →{' '}
                               <span className="font-semibold text-emerald-400 tabular-nums">
                                 {formatPrix(propreAttendu(depot.montant, depot.taux))}
@@ -465,9 +470,8 @@ export function Blanchiment() {
       {fenetre?.type === 'historique' && (
         <Modal title="Historique des blanchiments" onClose={() => setFenetre(null)}>
           <p className="text-sm text-zinc-300">
-            Sale déposé{' '}
-            <span className="font-semibold text-amber-400 tabular-nums">{formatPrix(totalDepose)}</span> · propre retiré{' '}
-            <span className="font-semibold text-emerald-400 tabular-nums">{formatPrix(totalRetire)}</span>
+            Sale déposé <span className="font-semibold text-amber-400 tabular-nums">{formatPrix(totalDepose)}</span> ·
+            propre retiré <span className="font-semibold text-emerald-400 tabular-nums">{formatPrix(totalRetire)}</span>
           </p>
           {journal.length === 0 && historique.length === 0 && (
             <p className="text-sm text-zinc-500">Aucune opération pour le moment.</p>
@@ -484,15 +488,16 @@ export function Blanchiment() {
                     <p className="text-zinc-300">
                       {op.type === 'depot' && (
                         <>
-                          Ajout de <span className="font-semibold text-amber-400 tabular-nums">{formatPrix(op.montant)}</span>{' '}
-                          de sale
+                          Ajout de{' '}
+                          <span className="font-semibold text-amber-400 tabular-nums">{formatPrix(op.montant)}</span> de
+                          sale
                         </>
                       )}
                       {op.type === 'retrait' && (
                         <>
                           Retrait de{' '}
-                          <span className="font-semibold text-emerald-400 tabular-nums">{formatPrix(op.montant)}</span> de
-                          propre
+                          <span className="font-semibold text-emerald-400 tabular-nums">{formatPrix(op.montant)}</span>{' '}
+                          de propre
                         </>
                       )}
                       {op.type === 'releve' && 'Relevé'}
@@ -517,7 +522,8 @@ export function Blanchiment() {
                     <span className="text-xs text-zinc-500">{formatDate(depot.recupereAt, true)}</span>
                   </div>
                   <p className="text-zinc-300">
-                    <span className="text-amber-400 tabular-nums">{formatPrix(depot.montant)}</span> de sale à {depot.taux} % →{' '}
+                    <span className="text-amber-400 tabular-nums">{formatPrix(depot.montant)}</span> de sale à{' '}
+                    {depot.taux} % →{' '}
                     <span className="font-semibold text-emerald-400 tabular-nums">
                       {formatPrix(depot.montantRecupere)}
                     </span>{' '}

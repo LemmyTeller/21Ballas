@@ -26,7 +26,7 @@ import {
   type Largeur,
 } from '../lib/preferences'
 import { estPresent, useMaintenant } from '../lib/presence'
-import { aAuMoins, estValide, formatDate, nomAffiche, rang } from '../lib/roles'
+import { aAuMoins, estValide, formatDate, nomAffiche, rang, peutGererLeGroupe } from '../lib/roles'
 import type { Annonce, Membre } from '../types'
 
 export function Accueil() {
@@ -273,7 +273,7 @@ function Joueurs({ moi, membres }: { moi: Membre; membres: Membre[] }) {
 function Annonces({ membre, membres }: { membre: Membre; membres: Membre[] }) {
   const annonces = useAnnonces()
   const [saisie, setSaisie] = useState(false)
-  const peutPublier = aAuMoins(membre, 'officier')
+  const peutPublier = peutGererLeGroupe(membre)
 
   return (
     <Card
@@ -311,9 +311,8 @@ function AnnonceItem({ annonce, membre, auteur }: { annonce: Annonce; membre: Me
   const [modification, setModification] = useState(false)
   // Menu « ⋯ », ancré sous son bouton
   const [menu, setMenu] = useState<{ droite: number; haut: number } | null>(null)
-  // Mêmes droits pour corriger une annonce que pour la supprimer : un gradé, ou le Masque violet qui l'a écrite
-  const peutSupprimer =
-    aAuMoins(membre, 'n2') || (membre.role === 'officier' && annonce.auteurUid === membre.uid)
+  // Mêmes droits pour corriger une annonce que pour la supprimer (pour le moment : tout membre validé)
+  const peutSupprimer = peutGererLeGroupe(membre)
 
   function supprimer() {
     if (window.confirm(`Supprimer l’annonce « ${annonce.titre} » ?`)) {
