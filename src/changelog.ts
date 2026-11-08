@@ -8,6 +8,20 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.16.0',
+    date: '2026-11-08',
+    changements: [
+      'Amendes : deux nouveaux délits moyens, « Flag livraison » et « Flag réception » (récidive 24 h).',
+      'Blanchiment : le plafond d’un commerce ne compte plus que le sale en attente. On peut recharger du sale même si du propre attend d’être retiré.',
+      'Bizne$$ simplifié : la culture, la zone de transformation et un graphique des entrées et sorties de stock par jour.',
+      'Zone de transformation : on y dépose des têtes de weed (500 au plus), elles deviennent des pochons toutes seules (un pochon de 2 têtes toutes les 9 secondes) et restent là pour les go-fast.',
+      'La zone sert aussi de stockage : on peut y déposer et y prendre des pochons.',
+      'Accueil : la tuile Biz affiche les pochons disponibles et les têtes en cours dans la zone de transformation.',
+      'Graphique : graines, têtes et pochons, entrées et sorties sur 14 jours. Les mouvements sont notés à partir de cette version.',
+      'Retirés : commandes de caisses, potentiel, bilan et vue Graph.',
+    ],
+  },
+  {
     version: '1.15.0',
     date: '2026-10-21',
     changements: [

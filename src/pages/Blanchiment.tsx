@@ -219,21 +219,15 @@ export function Blanchiment() {
                         </p>
                         {etat.libre !== null && commerce.montantMax ? (
                           <>
-                            {/* Jauge du plafond : sale en attente, puis part déjà blanchie non retirée, puis place libre */}
+                            {/* Jauge du plafond : seul le sale en attente l'occupe, le propre n'y compte pas */}
                             <div
                               role="img"
-                              aria-label={`Plafond occupé à ${Math.round((1 - etat.libre / commerce.montantMax) * 100)} %`}
-                              className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-zinc-800"
+                              aria-label={`Plafond de sale occupé à ${Math.round((etat.sale / commerce.montantMax) * 100)} %`}
+                              className="h-2 overflow-hidden rounded-full bg-zinc-800"
                             >
                               <div
-                                className="h-full bg-amber-500"
-                                style={{ width: `${(etat.sale / commerce.montantMax) * 100}%` }}
-                              />
-                              <div
-                                className="h-full bg-emerald-500"
-                                style={{
-                                  width: `${Math.max(0, 1 - (etat.sale + etat.libre) / commerce.montantMax) * 100}%`,
-                                }}
+                                className="h-full rounded-full bg-amber-500"
+                                style={{ width: `${Math.min(1, etat.sale / commerce.montantMax) * 100}%` }}
                               />
                             </div>
                             <p className="flex flex-wrap justify-between gap-x-4 text-sm">

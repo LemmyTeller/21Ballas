@@ -117,7 +117,7 @@ export async function ajouterSale(
 ): Promise<void> {
   const batch = writeBatch(db)
   operer(batch, commerce, 'depot', { sale: actuel.sale + montant, propre: actuel.propre }, montant, lieuId, acteurUid)
-  if (lieuId) varierStock(batch, articles, REFERENCE_ARGENT_SALE, lieuId, -Math.round(montant))
+  if (lieuId) varierStock(batch, articles, REFERENCE_ARGENT_SALE, lieuId, -Math.round(montant), 'Blanchiment')
   await batch.commit()
 }
 

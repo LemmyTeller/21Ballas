@@ -154,14 +154,13 @@ export function CompteModal({
               <p className="text-xs text-zinc-500">
                 {lieuId && `${formatPrix(enStock)} de sale dans ce lieu. `}
                 {estimation.libre !== null
-                  ? `Au plus ${formatPrix(estimation.libre)} : la place libre sous le plafond.`
+                  ? `Au plus ${formatPrix(estimation.libre)} : le plafond moins le sale encore en attente. Le propre déjà blanchi n’y compte pas.`
                   : 'Plafond inconnu : aucune limite n’est appliquée.'}
               </p>
             )}
             {action === 'retrait' && (
               <p className="text-xs text-zinc-500">
-                Le retrait est noté dans l’historique et libère de la place pour remettre du sale. Il ne touche pas au
-                Stock.
+                Le retrait est noté dans l’historique. Il ne touche pas au Stock.
               </p>
             )}
           </>

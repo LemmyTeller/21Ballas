@@ -53,37 +53,31 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('apercu') ==
   afficher(false)
 } else if (import.meta.env.DEV && new URLSearchParams(location.search).get('apercu') === 'graphiques') {
   // Aperçu des graphiques avec des données d'exemple, en développement : http://localhost:5173/?apercu=graphiques
-  const { Colonnes } = await import('./components/Colonnes.tsx')
-  const { COULEURS_SERIES } = await import('./lib/graphiques.ts')
+  const { EntreesSorties } = await import('./components/EntreesSorties.tsx')
   const jours = Array.from({ length: 14 }, (_, i) => `${String(i + 1).padStart(2, '0')}/10`)
+  const format = (v: number) => String(v)
   root.render(
-    <div className="grid gap-4 p-4 xl:grid-cols-2">
-      <Colonnes
-        titre="Caisses par jour"
+    <div className="grid gap-4 p-4 xl:grid-cols-3">
+      <EntreesSorties
+        titre="Graines de weed"
         etiquettes={jours}
-        format={(v) => String(v)}
-        series={[
-          { nom: 'Récupérées', couleur: COULEURS_SERIES[0], valeurs: [3, 5, 0, 2, 6, 4, 1, 0, 3, 7, 5, 2, 4, 6] },
-          { nom: 'Perdues', couleur: COULEURS_SERIES[1], valeurs: [1, 0, 0, 2, 1, 0, 3, 0, 1, 0, 2, 1, 0, 1] },
-        ]}
+        format={format}
+        entrees={[20, 0, 10, 30, 0, 0, 40, 10, 0, 20, 30, 0, 10, 20]}
+        sorties={[12, 8, 0, 25, 6, 0, 30, 4, 0, 18, 22, 6, 0, 15]}
       />
-      <Colonnes
-        titre="Pochons produits par jour"
+      <EntreesSorties
+        titre="Pochons de weed"
         etiquettes={jours}
-        format={(v) => String(v)}
-        series={[
-          {
-            nom: 'Pochons produits',
-            couleur: COULEURS_SERIES[0],
-            valeurs: [120, 250, 0, 80, 500, 340, 60, 0, 150, 730, 410, 90, 220, 380],
-          },
-        ]}
+        format={format}
+        entrees={[120, 250, 0, 80, 500, 340, 60, 0, 150, 730, 410, 90, 220, 380]}
+        sorties={[100, 0, 0, 300, 450, 0, 60, 20, 0, 600, 200, 0, 220, 100]}
       />
-      <Colonnes
+      <EntreesSorties
         titre="Sans donnée"
         etiquettes={jours}
-        format={(v) => String(v)}
-        series={[{ nom: 'Têtes', couleur: COULEURS_SERIES[0], valeurs: jours.map(() => 0) }]}
+        format={format}
+        entrees={jours.map(() => 0)}
+        sorties={jours.map(() => 0)}
       />
     </div>,
   )

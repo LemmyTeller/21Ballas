@@ -119,7 +119,7 @@ service cloud.firestore {
         && data.membreUid is string
         && shortString(data.membreNom, 60)
         && data.delit in ['dab', 'vol_voiture', 'superette', 'pharmacie', 'tatoueur', 'coiffeur', 'vetements',
-                          'fuite', 'drogue', 'effraction', 'agression', 'ud_g6', 'enlevement', 'otages',
+                          'fuite', 'drogue', 'flag_livraison', 'flag_reception', 'effraction', 'agression', 'ud_g6', 'enlevement', 'otages',
                           'banque', 'bijouterie']
         // Jamais dans le futur
         && data.date is timestamp
@@ -770,6 +770,41 @@ service cloud.firestore {
       // Annulation d'un lot en cours
       allow delete: if resource.data.statut == 'en_cours'
         && (gereLeGroupe() || (isValide() && resource.data.lanceParUid == request.auth.uid));
+    }
+
+    // Zone de transformation : les têtes déposées y deviennent des pochons en continu (un pochon de 2 têtes toutes
+    // les 9 s), gardés pour les go-fast. Un seul document, l'état au dernier enregistrement ; 500 têtes au plus.
+    match /zoneTransformation/{id} {
+      allow read: if isValide();
+      allow create, update: if gereLeGroupe()
+        && id == 'courante'
+        && request.resource.data.keys().hasOnly(['tetes', 'pochons', 'releveAt'])
+        && request.resource.data.keys().hasAll(['tetes', 'pochons', 'releveAt'])
+        && request.resource.data.tetes is number
+        && request.resource.data.tetes >= 0
+        && request.resource.data.tetes <= 500
+        && request.resource.data.pochons is number
+        && request.resource.data.pochons >= 0
+        && request.resource.data.pochons <= 1000000000
+        && request.resource.data.releveAt == request.time;
+      allow delete: if false;
+    }
+
+    // Journal des entrées et sorties de graines (610), têtes (167) et pochons (169) de weed : écrit avec chaque
+    // mouvement de stock, en ajout seul. Sert au graphique de l'onglet Bizne$$.
+    match /mouvementsStock/{id} {
+      allow read: if isValide();
+      allow create: if isValide()
+        && request.resource.data.keys().hasOnly(['reference', 'delta', 'lieuId', 'source', 'parUid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['reference', 'delta', 'lieuId', 'source', 'parUid', 'createdAt'])
+        && request.resource.data.reference in ['610', '167', '169']
+        && request.resource.data.delta is int
+        && request.resource.data.delta != 0
+        && (request.resource.data.lieuId == null || request.resource.data.lieuId is string)
+        && shortString(request.resource.data.source, 40)
+        && request.resource.data.parUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
     }
 
     // Écrit à la récolte d'un plan (onglet Map), puis figé : c'est la mémoire du bilan

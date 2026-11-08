@@ -214,7 +214,7 @@ export function Stock() {
                                   key={quantite}
                                   quantite={quantite}
                                   onAjuster={(delta) => agir(ajusterQuantite(article.id, lieu.id, delta))}
-                                  onDefinir={(valeur) => agir(definirQuantite(article.id, lieu.id, valeur))}
+                                  onDefinir={(valeur) => agir(definirQuantite(article.id, lieu.id, valeur, quantite))}
                                 />
                               ) : (
                                 <span className="text-base font-semibold text-zinc-100 tabular-nums">

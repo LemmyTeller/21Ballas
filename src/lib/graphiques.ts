@@ -1,2 +1,4 @@
-// Couleurs de séries pour fond sombre, dans un ordre fixe (jamais recyclé), vérifiées pour le daltonisme
-export const COULEURS_SERIES = ['#3987e5', '#d95926']
+// Couleurs des graphiques pour fond sombre, vérifiées pour le daltonisme : entrées en bleu, sorties en rouge
+// (paire froid / chaud qui se lit comme opposée)
+export const COULEUR_ENTREES = '#3987e5'
+export const COULEUR_SORTIES = '#e66767'

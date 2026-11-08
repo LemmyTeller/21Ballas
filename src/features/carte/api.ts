@@ -53,7 +53,7 @@ export async function creerPoint(
     updatedAt: serverTimestamp(),
   })
   if (type === 'plan' && stock && saisie.quantite) {
-    varierStock(batch, stock.articles, REFERENCE_GRAINE, stock.lieuId, -saisie.quantite)
+    varierStock(batch, stock.articles, REFERENCE_GRAINE, stock.lieuId, -saisie.quantite, 'Plantation')
   }
   await batch.commit()
 }
@@ -92,7 +92,7 @@ export async function recolterPlan(
   if (tetes > 0) {
     // Le plan disparaît : la récolte est notée à part, pour le bilan de l'onglet Bizne$$
     batch.set(doc(collection(db, 'recoltes')), { plants, tetes, parUid, createdAt: serverTimestamp() })
-    if (lieuId) varierStock(batch, articles, REFERENCE_TETE, lieuId, tetes)
+    if (lieuId) varierStock(batch, articles, REFERENCE_TETE, lieuId, tetes, 'Récolte')
     batch.set(
       doc(db, 'saisies', jourDeSaisie(Date.now())),
       { quantites: { [REFERENCE_TETE]: increment(tetes) }, updatedAt: serverTimestamp() },

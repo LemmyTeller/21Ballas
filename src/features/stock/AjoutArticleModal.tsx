@@ -37,7 +37,7 @@ export function AjoutArticleModal({
     setEnvoi(true)
     setErreur(null)
     try {
-      if (existant) await definirQuantite(existant.id, lieu.id, Number(quantite))
+      if (existant) await definirQuantite(existant.id, lieu.id, Number(quantite), quantiteDans(existant, lieu.id))
       else await creerArticle(item.cle, categorie.id, lieu.id, Number(quantite))
       onClose()
     } catch (err) {

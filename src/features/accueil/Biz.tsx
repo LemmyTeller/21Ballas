@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
 import { ImageItem } from '../../components/ImageItem'
 import { Card, Chargement, ErrorMessage } from '../../components/ui'
+import { estimerZone } from '../../lib/biz'
 import { formatNombre, formatPrix } from '../../lib/format'
+import { useMaintenant } from '../../lib/presence'
+import { useZone } from '../biz/hooks'
 import { useReferences } from '../../lib/useCatalogue'
 import { REFERENCE_ARGENT_SALE } from '../commerce/api'
 import { useArticles } from '../stock/useArticles'
@@ -18,6 +21,8 @@ const WEED = [
 export function Biz() {
   const articles = useArticles()
   const catalogue = useReferences()
+  const zone = useZone()
+  const zoneEtat = estimerZone(zone.data, useMaintenant(15_000))
 
   const total = (cle: string) =>
     Object.values(articles.data.find((a) => a.id === cle)?.quantites ?? {}).reduce((somme, q) => somme + Math.max(0, q), 0)
@@ -33,8 +38,8 @@ export function Biz() {
         </Link>
       }
     >
-      <ErrorMessage>{articles.error ?? catalogue.erreur}</ErrorMessage>
-      {articles.loading ? (
+      <ErrorMessage>{articles.error ?? catalogue.erreur ?? zone.error}</ErrorMessage>
+      {articles.loading || zone.loading ? (
         <Chargement />
       ) : (
         <>
@@ -51,6 +56,19 @@ export function Biz() {
               </li>
             ))}
           </ul>
+          {/* Hors des coffres : ce qui attend dans la zone de transformation, stock des go-fast */}
+          <p className="mt-2 border-t border-zinc-800 pt-2 text-sm text-zinc-400">
+            Zone de transfo :{' '}
+            <span className="font-semibold text-emerald-400 tabular-nums">{formatNombre(zoneEtat.pochons)}</span> pochons
+            dispo
+            {zoneEtat.tetes > 0 && (
+              <>
+                {' '}
+                · <span className="font-semibold text-zinc-100 tabular-nums">{formatNombre(zoneEtat.tetes)}</span> têtes en
+                cours
+              </>
+            )}
+          </p>
         </>
       )}
     </Card>

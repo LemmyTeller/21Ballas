@@ -1,6 +1,7 @@
 import { doc, increment, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
 import type { Article } from '../../types'
+import { noterMouvement } from '../stock/mouvements'
 
 // Ajoute du butin : la quantité s'ajoute à la saisie du jour et au stock du lieu, dans la même écriture.
 // `article` : l'article du Stock s'il existe déjà ; sinon l'item y entre « Sans catégorie », à classer ensuite.
@@ -33,6 +34,7 @@ export async function ajouterSaisie(
       updatedAt: serverTimestamp(),
     })
   }
+  noterMouvement(batch, reference, quantite, lieuId, 'Saisie journalière')
 
   await batch.commit()
 }

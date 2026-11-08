@@ -42,7 +42,7 @@ export function ArticleModal({
     executer(async () => {
       if (categorieId !== article.categorieId) await majCategorie(article.id, categorieId)
       if (lieu && Number(quantite) !== quantiteDans(article, lieu.id)) {
-        await definirQuantite(article.id, lieu.id, Number(quantite))
+        await definirQuantite(article.id, lieu.id, Number(quantite), quantiteDans(article, lieu.id))
       }
     })
   }
@@ -88,7 +88,7 @@ export function ArticleModal({
               variant="danger"
               disabled={envoi}
               onClick={() => {
-                if (window.confirm(`Retirer ${nom} de ${lieu.nom} ?`)) executer(() => retirerDuLieu(article.id, lieu.id))
+                if (window.confirm(`Retirer ${nom} de ${lieu.nom} ?`)) executer(() => retirerDuLieu(article.id, lieu.id, quantiteDans(article, lieu.id)))
               }}
             >
               Retirer de ce lieu

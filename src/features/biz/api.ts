@@ -1,82 +1,74 @@
-import { addDoc, collection, deleteDoc, doc, increment, serverTimestamp, writeBatch } from 'firebase/firestore'
-import { GRAINES_PAR_CAISSE, REFERENCE_POCHON, SECONDES_PAR_TETE, pochonsPour } from '../../lib/biz'
-import { REFERENCE_GRAINE, REFERENCE_TETE } from '../../lib/carte'
+import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { REFERENCE_POCHON, pochonsPour } from '../../lib/biz'
+import { REFERENCE_TETE } from '../../lib/carte'
 import { db } from '../../lib/firebase'
-import { jourDeSaisie } from '../../lib/journee'
-import type { Article, Caisse, Transformation } from '../../types'
+import type { Article, Transformation } from '../../types'
 import { varierStock } from '../stock/mouvements'
 
-// ---- Caisses ----
+const SOURCE = 'Zone de transformation'
 
-export async function commanderCaisses(quantite: number, creeParUid: string): Promise<void> {
-  await addDoc(collection(db, 'caisses'), {
-    quantite,
-    statut: 'commandee',
-    creeParUid,
-    createdAt: serverTimestamp(),
+// ---- Zone de transformation : on y dépose des têtes, elles deviennent des pochons gardés pour les go-fast ----
+
+export const refZone = () => doc(db, 'zoneTransformation', 'courante')
+
+// Enregistre l'état de la zone à l'instant, à l'heure du serveur
+function enregistrerZone(batch: ReturnType<typeof writeBatch>, etat: { tetes: number; pochons: number }) {
+  batch.set(refZone(), {
+    tetes: Math.max(0, etat.tetes),
+    pochons: Math.max(0, etat.pochons),
+    releveAt: serverTimestamp(),
   })
 }
 
-// Clôture d'une commande : `graines` graines ont été récupérées, les autres sont perdues (caisse jamais atteinte,
-// ou vidée en partie seulement). Elles entrent dans la saisie journalière et, si un lieu est choisi, dans son stock,
-// dans la même écriture.
-export async function cloreCaisses(
-  caisse: Caisse,
-  graines: number,
-  lieuId: string | null,
-  acteurUid: string,
-  articles: Article[],
-): Promise<void> {
-  const batch = writeBatch(db)
-  batch.update(doc(db, 'caisses', caisse.id), {
-    statut: 'close',
-    graines,
-    // Caisses vidées en entier
-    recuperees: Math.floor(graines / GRAINES_PAR_CAISSE),
-    lieuId,
-    closParUid: acteurUid,
-    closAt: serverTimestamp(),
-  })
-  if (graines > 0) {
-    if (lieuId) varierStock(batch, articles, REFERENCE_GRAINE, lieuId, graines)
-    batch.set(
-      doc(db, 'saisies', jourDeSaisie(Date.now())),
-      { quantites: { [REFERENCE_GRAINE]: increment(graines) }, updatedAt: serverTimestamp() },
-      { merge: true },
-    )
-  }
-  await batch.commit()
-}
-
-// Commande passée par erreur : possible tant qu'elle est en attente
-export async function supprimerCaisses(id: string): Promise<void> {
-  await deleteDoc(doc(db, 'caisses', id))
-}
-
-// ---- Établi ----
-
-// Pose un lot de têtes sur l'établi. Avec un lieu, elles sortent de son stock dans la même écriture.
-export async function lancerLot(
+// Dépose des têtes dans la zone. `actuel` : son état exact à l'instant. Avec un lieu, les têtes en sortent.
+export async function deposerTetes(
+  actuel: { tetes: number; pochons: number },
   tetes: number,
   lieuId: string | null,
-  lanceParUid: string,
   articles: Article[],
 ): Promise<void> {
   const batch = writeBatch(db)
-  batch.set(doc(collection(db, 'transformations')), {
-    tetes,
-    dureeSecondes: tetes * SECONDES_PAR_TETE,
-    debut: serverTimestamp(),
-    statut: 'en_cours',
-    lieuId,
-    lanceParUid,
-    createdAt: serverTimestamp(),
-  })
-  if (lieuId) varierStock(batch, articles, REFERENCE_TETE, lieuId, -tetes)
+  enregistrerZone(batch, { tetes: actuel.tetes + tetes, pochons: actuel.pochons })
+  if (lieuId) varierStock(batch, articles, REFERENCE_TETE, lieuId, -tetes, SOURCE)
   await batch.commit()
 }
 
-// Récupération d'un lot terminé : ses pochons entrent dans le stock du lieu choisi
+// Range des pochons dans la zone, qui sert aussi de stockage. Avec un lieu, ils en sortent.
+export async function deposerPochons(
+  actuel: { tetes: number; pochons: number },
+  pochons: number,
+  lieuId: string | null,
+  articles: Article[],
+): Promise<void> {
+  const batch = writeBatch(db)
+  enregistrerZone(batch, { tetes: actuel.tetes, pochons: actuel.pochons + pochons })
+  if (lieuId) varierStock(batch, articles, REFERENCE_POCHON, lieuId, -pochons, SOURCE)
+  await batch.commit()
+}
+
+// Retire des pochons de la zone, pour un go-fast. Avec un lieu, ils y entrent en stock.
+export async function retirerPochons(
+  actuel: { tetes: number; pochons: number },
+  pochons: number,
+  lieuId: string | null,
+  articles: Article[],
+): Promise<void> {
+  const batch = writeBatch(db)
+  enregistrerZone(batch, { tetes: actuel.tetes, pochons: actuel.pochons - pochons })
+  if (lieuId) varierStock(batch, articles, REFERENCE_POCHON, lieuId, pochons, SOURCE)
+  await batch.commit()
+}
+
+// Recale la zone sur les chiffres lus en jeu
+export async function releverZone(releve: { tetes: number; pochons: number }): Promise<void> {
+  const batch = writeBatch(db)
+  enregistrerZone(batch, releve)
+  await batch.commit()
+}
+
+// ---- Anciens lots à l'établi (un seul, récupéré à la fin) : plus aucun n'est lancé ----
+
+// Récupération d'un ancien lot terminé : ses pochons entrent dans le stock du lieu choisi
 export async function recupererLot(
   lot: Transformation,
   lieuPochonsId: string | null,
@@ -92,14 +84,14 @@ export async function recupererLot(
     recupereParUid: acteurUid,
     recupereAt: serverTimestamp(),
   })
-  if (lieuPochonsId) varierStock(batch, articles, REFERENCE_POCHON, lieuPochonsId, pochons)
+  if (lieuPochonsId) varierStock(batch, articles, REFERENCE_POCHON, lieuPochonsId, pochons, SOURCE)
   await batch.commit()
 }
 
-// Annulation d'un lot en cours : il disparaît et ses têtes retournent d'où elles venaient
+// Annulation d'un ancien lot en cours : il disparaît et ses têtes retournent d'où elles venaient
 export async function annulerLot(lot: Transformation, articles: Article[]): Promise<void> {
   const batch = writeBatch(db)
   batch.delete(doc(db, 'transformations', lot.id))
-  if (lot.lieuId) varierStock(batch, articles, REFERENCE_TETE, lot.lieuId, lot.tetes)
+  if (lot.lieuId) varierStock(batch, articles, REFERENCE_TETE, lot.lieuId, lot.tetes, SOURCE)
   await batch.commit()
 }

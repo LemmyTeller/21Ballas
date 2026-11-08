@@ -15,8 +15,8 @@ export interface Estimation {
 }
 
 // Où en est un commerce à un instant donné. Le jeu blanchit en continu, à vitesse fixe : un commerce plein
-// (`montantMax`) se vide en `dureeMinutes`, et chaque dollar de sale rend `taux` % de propre. Le plafond porte sur
-// le sale en attente plus le sale déjà blanchi dont le propre n'a pas été retiré.
+// (`montantMax`) se vide en `dureeMinutes`, et chaque dollar de sale rend `taux` % de propre. Le plafond ne porte
+// que sur le sale en attente : le propre s'accumule sans limite, qu'on le retire ou non.
 // Rien n'est planifié : tout se déduit du dernier état enregistré (`compte`) et du temps écoulé depuis.
 export function estimerCompte(
   compte: Pick<CompteBlanchiment, 'sale' | 'propre' | 'releveAt'> | undefined,
@@ -36,13 +36,12 @@ export function estimerCompte(
   const blanchi = Math.min(sale, vitesse * ecoule)
   const saleRestant = sale - blanchi
   const propreDisponible = propre + (blanchi * taux) / 100
-  const occupe = saleRestant + (propreDisponible * 100) / taux
 
   return {
     sale: Math.round(saleRestant),
     propre: Math.round(propreDisponible),
     estimable: true,
-    libre: Math.max(0, Math.round(montantMax - occupe)),
+    libre: Math.max(0, Math.round(montantMax - saleRestant)),
     minutesAvantVide: saleRestant / vitesse,
   }
 }

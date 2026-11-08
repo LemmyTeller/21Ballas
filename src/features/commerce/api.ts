@@ -11,7 +11,7 @@ import {
 import { db } from '../../lib/firebase'
 import { jourDeSaisie } from '../../lib/journee'
 import type { Article, Commande, Echange, LigneCommande, Partenaire, SensTarif } from '../../types'
-import { quantiteDans } from '../stock/useArticles'
+import { varierStock } from '../stock/mouvements'
 
 // Item « Billet de 1$ » du catalogue : c'est lui qui représente l'argent sale dans le Stock
 export const REFERENCE_ARGENT_SALE = '71'
@@ -118,24 +118,9 @@ export async function validerCommande(
   const batch = writeBatch(db)
 
   if (cloture.lieuId) {
+    // Jamais sous zéro ; un item reçu pas encore suivi entre au Stock « Sans catégorie » ; le mouvement est noté
     for (const [reference, delta] of variationsStock(commande, cloture)) {
-      const article = articles.find((a) => a.id === reference)
-      if (article) {
-        // Jamais sous zéro : on ne peut pas sortir plus que ce que le lieu contient
-        const quantite = Math.max(0, quantiteDans(article, cloture.lieuId) + delta)
-        batch.update(doc(db, 'articles', reference), {
-          [`quantites.${cloture.lieuId}`]: quantite,
-          updatedAt: serverTimestamp(),
-        })
-      } else if (delta > 0) {
-        // Item reçu qui n'était pas encore suivi : il entre au Stock, à classer ensuite (« Sans catégorie »)
-        batch.set(doc(db, 'articles', reference), {
-          categorieId: '',
-          quantites: { [cloture.lieuId]: delta },
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        })
-      }
+      varierStock(batch, articles, reference, cloture.lieuId, delta, 'Transaction')
     }
   }
 

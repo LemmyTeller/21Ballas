@@ -6,11 +6,14 @@ import {
   doc,
   increment,
   serverTimestamp,
-  setDoc,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
+import { noterMouvement } from './mouvements'
+
+// Mouvements faits à la main dans l'onglet Stock
+const SOURCE = 'Stock'
 
 export async function creerCategorie(nom: string): Promise<void> {
   await addDoc(collection(db, 'categoriesStock'), { nom: nom.trim(), createdAt: serverTimestamp() })
@@ -26,28 +29,42 @@ export async function supprimerCategorie(id: string): Promise<void> {
 
 // Premier classement d'un item : catégorie + quantité dans le lieu
 export async function creerArticle(itemId: string, categorieId: string, lieuId: string, quantite: number): Promise<void> {
-  await setDoc(doc(db, 'articles', itemId), {
+  const batch = writeBatch(db)
+  batch.set(doc(db, 'articles', itemId), {
     categorieId,
     quantites: { [lieuId]: quantite },
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+  noterMouvement(batch, itemId, quantite, lieuId, SOURCE)
+  await batch.commit()
 }
 
-export async function definirQuantite(itemId: string, lieuId: string, quantite: number): Promise<void> {
-  await updateDoc(doc(db, 'articles', itemId), { [`quantites.${lieuId}`]: quantite, updatedAt: serverTimestamp() })
+// `ancienne` : la quantité affichée avant la correction, pour noter l'écart
+export async function definirQuantite(itemId: string, lieuId: string, quantite: number, ancienne = 0): Promise<void> {
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'articles', itemId), { [`quantites.${lieuId}`]: quantite, updatedAt: serverTimestamp() })
+  noterMouvement(batch, itemId, quantite - ancienne, lieuId, SOURCE)
+  await batch.commit()
 }
 
-// Incrément atomique : deux gradés qui ajustent en même temps ne s'écrasent pas
+// Incrément atomique : deux membres qui ajustent en même temps ne s'écrasent pas
 export async function ajusterQuantite(itemId: string, lieuId: string, delta: number): Promise<void> {
-  await updateDoc(doc(db, 'articles', itemId), {
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'articles', itemId), {
     [`quantites.${lieuId}`]: increment(delta),
     updatedAt: serverTimestamp(),
   })
+  noterMouvement(batch, itemId, delta, lieuId, SOURCE)
+  await batch.commit()
 }
 
-export async function retirerDuLieu(itemId: string, lieuId: string): Promise<void> {
-  await updateDoc(doc(db, 'articles', itemId), { [`quantites.${lieuId}`]: deleteField(), updatedAt: serverTimestamp() })
+// `ancienne` : la quantité du lieu au moment du retrait, notée comme une sortie
+export async function retirerDuLieu(itemId: string, lieuId: string, ancienne = 0): Promise<void> {
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'articles', itemId), { [`quantites.${lieuId}`]: deleteField(), updatedAt: serverTimestamp() })
+  noterMouvement(batch, itemId, -ancienne, lieuId, SOURCE)
+  await batch.commit()
 }
 
 export async function majCategorie(itemId: string, categorieId: string): Promise<void> {

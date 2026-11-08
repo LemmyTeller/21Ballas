@@ -28,6 +28,8 @@ export const DELITS: Delit[] = [
   { id: 'vetements', nom: 'Braquage de magasin de vêtements', court: 'Braquage Vêtements', categorie: 'moyen' },
   { id: 'fuite', nom: 'Délit de fuite', court: 'Délit de fuite', categorie: 'moyen' },
   { id: 'drogue', nom: 'Flag de drogue', court: 'Flag de dope', categorie: 'moyen' },
+  { id: 'flag_livraison', nom: 'Flag livraison', court: 'Flag livraison', categorie: 'moyen' },
+  { id: 'flag_reception', nom: 'Flag réception', court: 'Flag réception', categorie: 'moyen' },
   { id: 'effraction', nom: 'Vol avec effraction', court: 'Vol avec effraction', categorie: 'moyen' },
   { id: 'agression', nom: 'Agression à main armée', court: 'Agression à main armée', categorie: 'majeur' },
   { id: 'ud_g6', nom: 'Braquage UD / G6', court: 'Braquage UD / G6', categorie: 'majeur' },

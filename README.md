@@ -148,7 +148,7 @@ Onglet **Blanchiment**, visible par tous les membres validés ; Admin, N1 et N2 
 
 - la vitesse est fixe, `montantMax ÷ dureeMinutes` dollars de sale par minute, même quand personne n'est connecté ;
 - on retire le propre disponible à tout moment, on rajoute du sale tant qu'il y a de la place ;
-- le plafond porte sur le sale en attente **plus** le sale déjà blanchi dont le propre n'a pas été retiré.
+- le plafond ne porte **que sur le sale en attente** : le propre s'accumule sans limite, qu'on le retire ou non.
 
 `comptesBlanchiment/{id du commerce}` garde l'état au dernier relevé (`sale`, `propre`, `releveAt`) ; l'état courant s'en déduit
 par `estimerCompte`, sans tâche planifiée. Trois actions, chacune enregistrant le nouvel état et une ligne du journal
@@ -164,7 +164,7 @@ récupèrent ou s'annulent comme avant, et les autres restent en historique.
 Onglet **Amendes**, ouvert à tous les membres validés. Il remplace le tableau joueurs × délits du groupe.
 
 - Collection `amendes` : joueur (`membreUid`, `membreNom`), `delit`, `date`, `note`, `creeParUid`. Aucun montant : seul le suivi des récidives compte.
-- Les 16 délits et leurs 3 catégories sont fixes, dans `src/lib/delits.ts` (liste reprise dans `firestore.rules`).
+- Les 18 délits et leurs 3 catégories sont fixes, dans `src/lib/delits.ts` (liste reprise dans `firestore.rules`).
 - **Récidive** : une amende met le joueur en récidive sur ce délit, pour une durée qui dépend de sa gravité : aucune pour un délit
   mineur, 24 h pour un délit moyen, 7 jours pour un délit majeur (`DUREE_RECIDIVE_MS`). Rien n'est stocké : la fin se déduit de
   `date`, et une nouvelle amende dans le délai est affichée « Récidive » et relance le délai.
@@ -174,32 +174,25 @@ Onglet **Amendes**, ouvert à tous les membres validés. Il remplace le tableau 
 
 ## Bizne$$
 
-Onglet **Bizne$$**, ouvert à tous les membres validés : la chaîne du business, de la caisse de graines au pochon.
-Les chiffres du jeu sont dans `src/lib/biz.ts` et `src/lib/carte.ts`, et repris dans `firestore.rules`.
+Onglet **Bizne$$**, ouvert à tous les membres validés : la culture, la zone de transformation et les mouvements de stock
+de la weed. Les chiffres du jeu sont dans `src/lib/biz.ts` et `src/lib/carte.ts`, et repris dans `firestore.rules`.
 
-| Étape | Règle | Où |
-|---|---|---|
-| Caisse | gratuite, peut être perdue ; 10 graines par caisse récupérée | `caisses` |
-| Culture | 1 graine par plant, 10 têtes par plant | plans de récolte de l'onglet Map (`pointsCarte`) |
-| Établi | 2 têtes = 1 pochon, 3 s par tête, 500 têtes au plus, un seul lot à la fois | `transformations` |
-| Vente | pochons vendus par Tarifs et Transactions | `tarifs`, `commandes` |
-
-- **Caisses** : une commande reste en attente jusqu'à sa clôture, où l'on note combien de **graines** ont été récupérées
-  (`graines`, de 0 à 10 par caisse) : une caisse se vide graine par graine et on peut être interrompu. Les autres sont perdues.
-  Les graines entrent au stock du lieu choisi et dans la saisie journalière. Le taux de réussite se compte en graines.
-- **Établi** : lancer un lot sort ses têtes du stock ; il se récupère une fois `dureeSecondes` écoulées depuis `debut`
-  (les règles le refusent avant), et ses pochons entrent au stock. Annuler un lot en cours rend les têtes.
-  « Un seul lot à la fois » est tenu par l'interface, pas par les règles.
-- **Récoltes** : `recoltes` garde une ligne par plan récolté, écrite depuis l'onglet Map ; c'est ce qui alimente le bilan,
-  puisqu'un plan récolté disparaît de la carte.
-- **Potentiel** : tout ce qui est engagé, converti en pochons, puis chiffré au meilleur prix de vente du pochon des Tarifs.
-- **Graph** (admins uniquement, sous-onglet invisible des autres) : indicateurs de la période (7, 14 ou 30 journées de jeu)
-  comparés à la période précédente, et histogrammes par jour — caisses récupérées et perdues, têtes récoltées, pochons
-  produits, pochons vendus, argent encaissé sur les ventes. Tout est calculé à l'affichage à partir de `caisses`,
-  `recoltes`, `transformations` et `commandes` ; composant `src/components/Colonnes.tsx`, aperçu sans connexion par
-  `?apercu=graphiques` (développement).
-- Tout membre validé fait tourner la chaîne ; l'auteur ou un gradé annule un lot ou supprime une commande en attente ;
-  ce qui est clos ne se modifie plus.
+- **Culture** : graines, plants en terre (plans de récolte de l'onglet Map), têtes et pochons en stock, plans à arroser
+  ou à récolter. 1 graine par plant, 10 têtes par plant.
+- **Zone de transformation** (`zoneTransformation/courante`) : on y dépose des têtes (500 au plus en même temps), qui
+  deviennent des pochons **en continu**, un pochon (2 têtes) toutes les 9 s, comme un commerce de blanchiment. Les
+  pochons y restent : la zone sert aussi de stockage pour les go-fast, on peut y **déposer** des pochons (pris dans un
+  lieu) et en **retirer** (vers un lieu, ou nulle part pour un go-fast). La tuile Biz de l'accueil affiche ce qu'elle
+  contient. Le document garde l'état au dernier enregistrement ; `estimerZone` en déduit l'état courant. « Relevé »
+  recale sur les chiffres lus en jeu.
+- **Entrées et sorties par jour** : graphique des 14 dernières journées de jeu pour les graines, têtes et pochons,
+  à partir de `mouvementsStock`. Ce journal, en ajout seul, reçoit une ligne à chaque mouvement de stock de ces trois
+  items, quelle qu'en soit l'origine : saisie journalière, onglet Stock, plantation, récolte, zone de transformation,
+  transactions (`noterMouvement` et `varierStock` dans `src/features/stock/mouvements.ts`). Composant
+  `src/components/EntreesSorties.tsx`, aperçu sans connexion par `?apercu=graphiques` (développement).
+- **Anciens fonctionnements** : les collections `caisses`, `transformations` (lots à l'établi) et `recoltes` restent en
+  base. On ne commande plus de caisses depuis l'appli ; un ancien lot encore en cours se récupère ou s'annule depuis la
+  zone de transformation.
 
 ## Map
 

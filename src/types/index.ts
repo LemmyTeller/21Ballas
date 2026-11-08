@@ -108,7 +108,28 @@ export interface Caisse {
   closAt?: Timestamp | null
 }
 
-// Lot de têtes posé sur l'établi : il devient des pochons au bout de `dureeSecondes`
+// Zone de transformation (document zoneTransformation/courante) : les têtes déposées y deviennent des pochons
+// en continu, et elle garde les pochons pour les go-fast. État au dernier enregistrement (voir src/lib/biz.ts).
+export interface ZoneTransformation {
+  // Têtes encore à transformer et pochons prêts, à `releveAt` (valeurs non arrondies)
+  tetes: number
+  pochons: number
+  releveAt: Timestamp | null
+}
+
+// Entrée (delta positif) ou sortie (négatif) de stock d'une graine, d'une tête ou d'un pochon de weed
+export interface MouvementStock {
+  id: string
+  reference: string
+  delta: number
+  lieuId: string | null
+  // D'où vient le mouvement : « Saisie journalière », « Stock », « Plantation »…
+  source: string
+  parUid: string
+  createdAt: Timestamp | null
+}
+
+// Ancien fonctionnement : lot de têtes posé sur l'établi, qui devient des pochons au bout de `dureeSecondes`
 export interface Transformation {
   id: string
   tetes: number
