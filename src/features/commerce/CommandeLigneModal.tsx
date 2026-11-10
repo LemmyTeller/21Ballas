@@ -137,6 +137,29 @@ export function CommandeLigneModal({
           />
         </label>
 
+        {/* Montant de la ligne au tarif, recalculé à chaque frappe ; « — » pour un prix non renseigné */}
+        {Number(quantite) >= 1 && (tarif.prixPropre !== null || tarif.prixSale !== null) && (
+          <p className="flex flex-wrap items-baseline gap-x-4 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm">
+            <span className="text-zinc-400">{vente ? 'À recevoir' : 'À payer'}</span>
+            {tarif.prixPropre !== null && (
+              <span>
+                <span className="font-semibold text-emerald-400 tabular-nums">
+                  {formatPrix(Number(quantite) * tarif.prixPropre)}
+                </span>{' '}
+                <span className="text-zinc-500">propre</span>
+              </span>
+            )}
+            {tarif.prixSale !== null && (
+              <span>
+                <span className="font-semibold text-amber-400 tabular-nums">
+                  {formatPrix(Number(quantite) * tarif.prixSale)}
+                </span>{' '}
+                <span className="text-zinc-500">sale</span>
+              </span>
+            )}
+          </p>
+        )}
+
         {partenaire && enCours.length > 0 && (
           <fieldset className="space-y-2">
             <legend className="mb-1 text-sm font-medium text-amber-200">
