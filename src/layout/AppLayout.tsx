@@ -23,6 +23,7 @@ const LIENS: { to: string; label: string; minimum: Role; admin?: boolean }[] = [
   { to: '/carjacking', label: 'Carjacking', minimum: 'membre' },
   { to: '/amendes', label: 'Amendes', minimum: 'membre' },
   { to: '/map', label: 'Map', minimum: 'membre' },
+  { to: '/lucky-wheel', label: 'Lucky Wheel', minimum: 'membre' },
   { to: '/annuaire', label: 'Annuaire', minimum: 'membre' },
   // Catalogue brut du serveur : outil d'administration, proposé aux seuls admins
   { to: '/inventaire', label: 'Inventaire', minimum: 'membre', admin: true },
@@ -34,6 +35,7 @@ const LARGEURS: Record<string, string> = {
   // L'accueil porte beaucoup d'encarts : il s'étale presque sur toute la largeur de l'écran
   '/': 'max-w-[120rem]',
   '/bizness': 'max-w-[110rem]',
+  '/lucky-wheel': 'max-w-7xl',
   '/tarifs': 'max-w-7xl',
   '/transactions': 'max-w-7xl',
   '/annuaire': 'max-w-7xl',

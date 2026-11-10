@@ -194,6 +194,18 @@ de la weed. Les chiffres du jeu sont dans `src/lib/biz.ts` et `src/lib/carte.ts`
   base. On ne commande plus de caisses depuis l'appli ; un ancien lot encore en cours se récupère ou s'annule depuis la
   zone de transformation.
 
+## Lucky Wheel
+
+Onglet **Lucky Wheel**, ouvert à tous les membres validés : un groupe à qui l'on doit des pochons tente de faire monter,
+ou descendre, la somme due. On saisit le groupe (facultatif) et la quantité ; le stock n'est pas touché.
+
+- 16 cases à chances égales (`CASES_ROUE` dans `src/lib/roue.ts`) : X2, /2, X1.5, X1.25, /1.5, trois +10, deux +5, +20,
+  +25, +1, deux -5 et un -10. Résultat arrondi au pochon le plus proche, jamais sous zéro.
+- La case est tirée avec le générateur cryptographique du navigateur, et le tour est enregistré dans `tiragesRoue`
+  **avant** que la roue s'arrête : relancer la page ne change pas le résultat. L'historique est en ajout seul ; seul un
+  gradé peut effacer un tour fait par erreur.
+- `http://localhost:5173/?apercu=roue` affiche la roue seule, sans connexion (développement uniquement).
+
 ## Map
 
 Onglet **Map**, ouvert à tous les membres validés : la carte du serveur (avec les zips) et les points du groupe.

@@ -807,6 +807,33 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---- Lucky Wheel : tours de roue de la chance sur des pochons dus à un groupe, en ajout seul ----
+    // Les 16 cases sont dans src/lib/roue.ts ; le stock n'est pas touché.
+    match /tiragesRoue/{id} {
+      allow read: if isValide();
+      allow create: if isValide()
+        && request.resource.data.keys().hasOnly(
+             ['quantite', 'partenaireId', 'partenaireNom', 'caseIndex', 'libelle', 'resultat', 'parUid', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['quantite', 'partenaireId', 'partenaireNom', 'caseIndex', 'libelle', 'resultat', 'parUid', 'createdAt'])
+        && request.resource.data.quantite is int
+        && request.resource.data.quantite >= 1
+        && request.resource.data.quantite <= 1000000
+        && (request.resource.data.partenaireId == null || request.resource.data.partenaireId is string)
+        && shortString(request.resource.data.partenaireNom, 60)
+        && request.resource.data.caseIndex is int
+        && request.resource.data.caseIndex >= 0
+        && request.resource.data.caseIndex <= 15
+        && shortString(request.resource.data.libelle, 10)
+        && request.resource.data.resultat is int
+        && request.resource.data.resultat >= 0
+        && request.resource.data.parUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      // Un tour fait par erreur : seuls les gradés l'effacent
+      allow delete: if isGrade();
+    }
+
     // Écrit à la récolte d'un plan (onglet Map), puis figé : c'est la mémoire du bilan
     match /recoltes/{id} {
       allow read: if isValide();

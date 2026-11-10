@@ -18,6 +18,7 @@ import { Gestion } from './pages/Gestion'
 import { Inventaire } from './pages/Inventaire'
 import { Journal } from './pages/Journal'
 import { Login } from './pages/Login'
+import { LuckyWheel } from './pages/LuckyWheel'
 import { MapPage } from './pages/Map'
 import { Membres } from './pages/Membres'
 import { Pending, Revoque } from './pages/Pending'
@@ -64,6 +65,7 @@ function Portail() {
           <Route path="carjacking" element={<Carjacking />} />
           <Route path="amendes" element={<Amendes />} />
           <Route path="map" element={<MapPage />} />
+          <Route path="lucky-wheel" element={<LuckyWheel />} />
           <Route path="profil" element={<Profil />} />
           <Route
             path="inventaire"

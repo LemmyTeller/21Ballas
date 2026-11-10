@@ -81,6 +81,28 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('apercu') ==
       />
     </div>,
   )
+} else if (import.meta.env.DEV && new URLSearchParams(location.search).get('apercu') === 'roue') {
+  // Aperçu de la roue seule, sans connexion, en développement : http://localhost:5173/?apercu=roue
+  const { Roue } = await import('./features/roue/Roue.tsx')
+  const { tirerCase } = await import('./lib/roue.ts')
+  let rotation = 0
+  const afficher = (enRotation: boolean) =>
+    root.render(
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        <button
+          type="button"
+          className="rounded-md border border-zinc-700 px-3 py-1 text-sm"
+          onClick={() => {
+            rotation += 5 * 360 + ((360 - tirerCase() * 22.5 - (rotation % 360) + 720) % 360)
+            afficher(true)
+          }}
+        >
+          Tourner
+        </button>
+        <Roue rotation={rotation} enRotation={enRotation} />
+      </div>,
+    )
+  afficher(false)
 } else if (isConfigured) {
   // Import différé : Firebase ne doit pas s'initialiser sans configuration
   const { default: App } = await import('./App.tsx')

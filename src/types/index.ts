@@ -117,6 +117,23 @@ export interface ZoneTransformation {
   releveAt: Timestamp | null
 }
 
+// Tour de la roue de la chance : des pochons dus à un groupe, la case tirée, et ce qui est dû au final.
+// Le stock n'est pas touché.
+export interface TirageRoue {
+  id: string
+  quantite: number
+  // Groupe à qui les pochons sont dus ; null : aucun en particulier
+  partenaireId: string | null
+  // Nom au moment du tirage : l'historique reste lisible si le groupe est supprimé
+  partenaireNom: string
+  // Indice de la case dans CASES_ROUE, et son libellé au moment du tirage
+  caseIndex: number
+  libelle: string
+  resultat: number
+  parUid: string
+  createdAt: Timestamp | null
+}
+
 // Entrée (delta positif) ou sortie (négatif) de stock d'une graine, d'une tête ou d'un pochon de weed
 export interface MouvementStock {
   id: string

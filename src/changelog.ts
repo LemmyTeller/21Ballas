@@ -8,6 +8,14 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.17.0',
+    date: '2026-11-10',
+    changements: [
+      'Nouvel onglet Lucky Wheel : un groupe à qui l’on doit des pochons tente sa chance sur une roue de 16 cases (X2, /2, X1.5, X1.25, /1.5, +10, +5, +20, +25, +1, -5, -10).',
+      'Chaque tour est enregistré et visible dans l’historique. Le stock n’est pas touché.',
+    ],
+  },
+  {
     version: '1.16.0',
     date: '2026-11-08',
     changements: [
