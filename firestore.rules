@@ -135,7 +135,7 @@ service cloud.firestore {
         && data.keys().hasAll(
                ['type', 'x', 'y', 'nom', 'commentaire', 'proprietaireId', 'quantite', 'etape', 'etapeDebut',
                 'creeParUid', 'createdAt', 'updatedAt'])
-        && data.type in ['commerce', 'plan', 'interet', 'danger']
+        && data.type in ['commerce', 'plan', 'interet', 'danger', 'adresse']
         // Position en fraction de la carte
         && data.x is number && data.x >= 0 && data.x <= 1
         && data.y is number && data.y >= 0 && data.y <= 1

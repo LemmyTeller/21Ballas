@@ -173,7 +173,7 @@ export interface Recolte {
   createdAt: Timestamp | null
 }
 
-export type TypePoint = 'commerce' | 'plan' | 'interet' | 'danger'
+export type TypePoint = 'commerce' | 'plan' | 'interet' | 'danger' | 'adresse'
 // Étapes de pousse d'un plan de récolte ; « prêt à récolter » se déduit de la fin de la floraison
 export type EtapePlan = 'germination' | 'croissance' | 'floraison'
 

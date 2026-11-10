@@ -10,6 +10,8 @@ export const TYPES_POINT: { id: TypePoint; nom: string; pluriel: string; couleur
   { id: 'plan', nom: 'Plan de récolte', pluriel: 'Plans de récolte', couleur: '#16a34a' },
   { id: 'interet', nom: 'Point d’intérêt', pluriel: 'Points d’intérêt', couleur: '#2563eb' },
   { id: 'danger', nom: 'Danger', pluriel: 'Dangers', couleur: '#dc2626' },
+  // Dessinée en maison noire plutôt qu'en pastille (voir IconeMaison)
+  { id: 'adresse', nom: 'Adresse', pluriel: 'Adresses', couleur: '#0a0a0a' },
 ]
 
 export const typePoint = (id: TypePoint) => TYPES_POINT.find((t) => t.id === id) ?? TYPES_POINT[0]

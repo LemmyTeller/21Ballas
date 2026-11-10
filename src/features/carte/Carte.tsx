@@ -2,6 +2,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef } from 'react'
 import { CARTE } from '../../lib/carte'
+import { TRACE_MAISON } from './IconeMaison'
 
 // Ce que la carte affiche pour un point : sa place, sa couleur, et ce qu'il dit au survol
 export interface Marqueur {
@@ -15,6 +16,25 @@ export interface Marqueur {
   etiquette: string
   // Marqueur mis en avant (plan à arroser ou prêt, point en cours de déplacement)
   accent: boolean
+  // true : dessiné en maison noire (adresse) au lieu d'une pastille de couleur
+  maison?: boolean
+}
+
+const SVG = 'http://www.w3.org/2000/svg'
+
+// Maison noire au contour blanc, même tracé que IconeMaison
+function maisonSvg(accent: boolean): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  svg.setAttribute('class', `block size-6 drop-shadow-[0_1px_3px_rgb(0_0_0/0.8)] ${accent ? 'animate-pulse' : ''}`)
+  const trace = document.createElementNS(SVG, 'path')
+  trace.setAttribute('d', TRACE_MAISON)
+  trace.setAttribute('fill', '#0a0a0a')
+  trace.setAttribute('stroke', '#ffffff')
+  trace.setAttribute('stroke-width', '1.8')
+  trace.setAttribute('stroke-linejoin', 'round')
+  svg.append(trace)
+  return svg
 }
 
 const { largeur, hauteur, zoomMax, tuile } = CARTE
@@ -24,12 +44,16 @@ function icone(marqueur: Marqueur): L.DivIcon {
   const cadre = document.createElement('div')
   cadre.className = 'flex flex-col items-center'
 
-  const pastille = document.createElement('span')
-  pastille.className = `block size-5 rounded-full border-2 border-white shadow-[0_1px_4px_rgb(0_0_0/0.7)] ${
-    marqueur.accent ? 'animate-pulse ring-4 ring-white/40' : ''
-  }`
-  pastille.style.backgroundColor = marqueur.couleur
-  cadre.append(pastille)
+  if (marqueur.maison) {
+    cadre.append(maisonSvg(marqueur.accent))
+  } else {
+    const pastille = document.createElement('span')
+    pastille.className = `block size-5 rounded-full border-2 border-white shadow-[0_1px_4px_rgb(0_0_0/0.7)] ${
+      marqueur.accent ? 'animate-pulse ring-4 ring-white/40' : ''
+    }`
+    pastille.style.backgroundColor = marqueur.couleur
+    cadre.append(pastille)
+  }
 
   if (marqueur.etiquette) {
     const etiquette = document.createElement('span')
@@ -39,8 +63,9 @@ function icone(marqueur: Marqueur): L.DivIcon {
     cadre.append(etiquette)
   }
 
-  // Ancre au centre de la pastille, quelle que soit la largeur de l'étiquette
-  return L.divIcon({ html: cadre, className: '', iconSize: [120, 20], iconAnchor: [60, 10] })
+  // Ancre au centre de la pastille (ou de la maison), quelle que soit la largeur de l'étiquette
+  const demi = marqueur.maison ? 12 : 10
+  return L.divIcon({ html: cadre, className: '', iconSize: [120, demi * 2], iconAnchor: [60, demi] })
 }
 
 // Carte du serveur, en tuiles (public/carte, générées par `npm run carte`), avec les points posés dessus.

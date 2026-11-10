@@ -7,6 +7,7 @@ import type { Article, CommerceVille, Lieu, Partenaire, PointCarte, TypePoint } 
 import { PROPRIETAIRE_NOUS, nomCommerce } from '../blanchiment/api'
 import { quantiteDans } from '../stock/useArticles'
 import { creerPoint, modifierPoint } from './api'
+import { IconeMaison } from './IconeMaison'
 
 // Valeur de la liste « Commerce » pour un commerce qui n'est pas recensé dans le Blanchiment
 const LIBRE = 'libre'
@@ -106,7 +107,11 @@ export function PointModal({
                   checked={type === t.id}
                   onChange={() => setType(t.id)}
                 />
-                <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: t.couleur }} />
+                {t.id === 'adresse' ? (
+                  <IconeMaison className="size-4" />
+                ) : (
+                  <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: t.couleur }} />
+                )}
                 <span className="font-medium text-zinc-100">{t.nom}</span>
               </label>
             ))}
@@ -161,11 +166,12 @@ export function PointModal({
             )}
             {(type !== 'commerce' || lien === LIBRE) && (
               <label className="block space-y-1 text-sm">
-                <span className="text-zinc-400">Nom</span>
+                <span className="text-zinc-400">{type === 'adresse' ? 'Adresse (zip, rue, nom…)' : 'Nom'}</span>
                 <input
                   className={inputClass}
                   value={nom}
                   maxLength={60}
+                  placeholder={type === 'adresse' ? '9102' : undefined}
                   required
                   autoFocus
                   onChange={(e) => setNom(e.target.value)}
@@ -191,7 +197,9 @@ export function PointModal({
         )}
 
         <label className="block space-y-1 text-sm">
-          <span className="text-zinc-400">Commentaire{type === 'commerce' || plan ? ' (facultatif)' : ''}</span>
+          <span className="text-zinc-400">
+            Commentaire{type === 'commerce' || type === 'adresse' || plan ? ' (facultatif)' : ''}
+          </span>
           <textarea
             className={inputClass}
             rows={3}

@@ -824,6 +824,7 @@ describe('map : points de la carte', () => {
     await assertFails(setDoc(ref('noir', 'e'), point('violet')))
     await assertFails(setDoc(ref('noir', 'f'), point('noir', { x: 1.5 })))
     await assertFails(setDoc(ref('noir', 'g'), point('noir', { type: 'tresor' })))
+    await assertSucceeds(setDoc(ref('noir', 'i'), point('noir', { type: 'adresse', nom: '9102', commentaire: 'Planque' })))
     await assertFails(setDoc(ref('noir', 'h'), point('noir', { quantite: 3 })))
   })
   it('seul un commerce se rattache à une fiche du Blanchiment', async () => {

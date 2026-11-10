@@ -6,6 +6,7 @@ import { useCommerces } from '../features/blanchiment/useCommerces'
 import { deplacerPoint } from '../features/carte/api'
 import { Carte, type Marqueur } from '../features/carte/Carte'
 import { FichePoint } from '../features/carte/FichePoint'
+import { IconeMaison } from '../features/carte/IconeMaison'
 import { PointModal } from '../features/carte/PointModal'
 import { usePoints } from '../features/carte/usePoints'
 import { useLieux } from '../features/gestion/useLieux'
@@ -106,7 +107,13 @@ export function MapPage() {
               etiquette: commerce?.zip ?? '',
             }
           }
-          return { ...base, couleur: typePoint(p.type).couleur, titre: p.nom, etiquette: '' }
+          return {
+            ...base,
+            couleur: typePoint(p.type).couleur,
+            titre: p.commentaire ? `${p.nom} — ${p.commentaire}` : p.nom,
+            etiquette: '',
+            maison: p.type === 'adresse',
+          }
         }),
     [points.data, partenaires.data, commerces.data, masques, maintenant, deplace],
   )
@@ -173,10 +180,16 @@ export function MapPage() {
                   }`}
                   onClick={() => setMasques(visible ? [...masques, t.id] : masques.filter((m) => m !== t.id))}
                 >
-                  <span
-                    className={`size-2.5 rounded-full ${visible ? '' : 'opacity-30'}`}
-                    style={{ backgroundColor: t.couleur }}
-                  />
+                  {t.id === 'adresse' ? (
+                    <span className={visible ? '' : 'opacity-30'}>
+                      <IconeMaison className="size-4" />
+                    </span>
+                  ) : (
+                    <span
+                      className={`size-2.5 rounded-full ${visible ? '' : 'opacity-30'}`}
+                      style={{ backgroundColor: t.couleur }}
+                    />
+                  )}
                   {t.pluriel}
                   <span className="text-zinc-500 tabular-nums">
                     {points.data.filter((p) => p.type === t.id).length}

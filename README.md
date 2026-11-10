@@ -213,7 +213,8 @@ Onglet **Map**, ouvert à tous les membres validés : la carte du serveur (avec 
 - **Carte** : `map_gta5_21jc.png`, à la racine, n'est pas versionnée (ressource du serveur). `npm run carte` la découpe en tuiles
   WebP dans `public/carte/` (non versionné non plus) et écrit ses dimensions dans `src/data/carte.json`.
   **À lancer avant un build sur une machine neuve**, et à chaque changement de carte. Affichage avec Leaflet, en repère image.
-- **Points** (`pointsCarte`) : commerce (avec appartenance), plan de récolte, point d'intérêt, danger. Position en fraction de la
+- **Points** (`pointsCarte`) : commerce (avec appartenance), plan de récolte, point d'intérêt, danger, adresse
+  (maison noire, `IconeMaison`). Position en fraction de la
   carte (0 à 1). Tout membre validé pose un point ; l'auteur et Admin, N1, N2 le modifient, le déplacent et le suppriment.
 - **Commerce et Blanchiment** : un point de type commerce se rattache à une fiche de l'onglet Blanchiment (`commerceId`),
   une fiche ne se posant qu'une fois. Le nom, le zip et le propriétaire affichés sont alors ceux de la fiche, relus en direct ;
