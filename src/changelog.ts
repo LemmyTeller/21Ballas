@@ -8,6 +8,14 @@ export interface VersionEntry {
 // À chaque montée de version : ajouter une entrée en tête et reporter le numéro dans package.json.
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.20.0',
+    date: '2026-11-13',
+    changements: [
+      'Transactions : une transaction qui mêle ventes et achats affiche son solde, en propre et en sale, avec ce qui reste à recevoir ou à payer.',
+      'Elle détaille aussi le poids de ce qu’on vend et de ce qu’on achète, en plus du poids total.',
+    ],
+  },
+  {
     version: '1.19.0',
     date: '2026-11-10',
     changements: [

@@ -263,15 +263,60 @@ export function Commerce() {
                             {enAttente && <td />}
                           </tr>
                         ))}
-                      {/* Poids de tous les items de la transaction, vendus et achetés confondus */}
+                      {/* Transaction mixte : ventes et achats se compensent, monnaie par monnaie */}
+                      {lignesDe(commande, 'vente').length > 0 && lignesDe(commande, 'achat').length > 0 && (
+                        <tr className="font-semibold">
+                          <td colSpan={4} className="pt-2 text-xs font-normal tracking-wide text-zinc-300 uppercase">
+                            Solde
+                          </td>
+                          {(['prixPropre', 'prixSale'] as const).map((monnaie) => {
+                            const recu = montantAttendu(lignesDe(commande, 'vente'), monnaie)
+                            const paye = montantAttendu(lignesDe(commande, 'achat'), monnaie)
+                            const solde = recu === null && paye === null ? null : (recu ?? 0) - (paye ?? 0)
+                            return (
+                              <td key={monnaie} className="pt-2 pl-3 text-right whitespace-nowrap tabular-nums">
+                                {solde === null || solde === 0 ? (
+                                  <span className="text-zinc-500">{solde === 0 ? 'Équilibré' : '—'}</span>
+                                ) : (
+                                  <>
+                                    <span className="block text-base text-zinc-50">{formatPrix(Math.abs(solde))}</span>
+                                    <span className={`block text-xs font-medium ${solde > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      {solde > 0 ? 'à recevoir' : 'à payer'}
+                                    </span>
+                                  </>
+                                )}
+                              </td>
+                            )
+                          })}
+                          {enAttente && <td />}
+                        </tr>
+                      )}
+                      {/* Poids sur une ligne : ce qu'on vend (mauve) et ce qu'on achète (bleu), aux couleurs des lignes
+                          du tableau, puis le total. Une transaction à un seul sens n'a que le total. */}
                       <tr className="font-semibold">
-                        <td colSpan={3} className="pt-2 text-xs font-normal tracking-wide text-zinc-500 uppercase">
-                          Poids total
+                        <td colSpan={2} className="pt-2 text-xs font-normal tracking-wide text-zinc-500 uppercase">
+                          Poids
                         </td>
-                        <td className="pt-2 pl-3 text-right whitespace-nowrap text-zinc-100 tabular-nums">
-                          {formatPoids(commande.lignes.reduce((total, l) => total + poidsLigne(l), 0))}
+                        <td colSpan={enAttente ? 5 : 4} className="pt-2 text-right">
+                          <span className="inline-flex flex-wrap justify-end gap-x-4 gap-y-1 whitespace-nowrap tabular-nums">
+                            {lignesDe(commande, 'vente').length > 0 && lignesDe(commande, 'achat').length > 0 && (
+                              <>
+                                <span className="text-purple-300">
+                                  {formatPoids(lignesDe(commande, 'vente').reduce((total, l) => total + poidsLigne(l), 0))}
+                                  <span className="ml-1 text-xs font-normal">on vend</span>
+                                </span>
+                                <span className="text-sky-300">
+                                  {formatPoids(lignesDe(commande, 'achat').reduce((total, l) => total + poidsLigne(l), 0))}
+                                  <span className="ml-1 text-xs font-normal">on achète</span>
+                                </span>
+                              </>
+                            )}
+                            <span className="text-zinc-50">
+                              {formatPoids(commande.lignes.reduce((total, l) => total + poidsLigne(l), 0))}
+                              <span className="ml-1 text-xs font-normal text-zinc-400">au total</span>
+                            </span>
+                          </span>
                         </td>
-                        <td colSpan={enAttente ? 3 : 2} />
                       </tr>
                     </tfoot>
                   </table>
